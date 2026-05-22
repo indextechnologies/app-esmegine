@@ -1,0 +1,47 @@
+'use client';
+import { useParams } from 'next/navigation';
+import Sidebar from '../../components/Sidebar';
+import { BellIcon, SearchIcon } from '../../components/Icons';
+import { CLIENTS } from '../../lib/demo-data';
+
+export default function TenantLayout({ children }: { children: React.ReactNode }) {
+  const { tenant } = useParams<{ tenant: string }>();
+  const client = CLIENTS.find(c => c.slug === tenant);
+
+  if (!client) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-3)' }}>
+        Cliente no encontrado
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      <Sidebar
+        mode="tenant"
+        slug={client.slug}
+        name={client.name}
+        industry={client.industry}
+        emoji={client.emoji}
+      />
+      <div className="main-area">
+        <header className="top-bar">
+          <span className="bar-title">{client.name}</span>
+          <div className="search-bar">
+            <SearchIcon size={13} />
+            <input placeholder="Buscar..." />
+          </div>
+          <div className="bar-actions">
+            <div className="icon-btn">
+              <BellIcon size={14} />
+              <div className="notif-dot" />
+            </div>
+            <div className="av-sm">{client.name.slice(0, 2).toUpperCase()}</div>
+          </div>
+        </header>
+        <main className="page-content">{children}</main>
+      </div>
+    </div>
+  );
+}

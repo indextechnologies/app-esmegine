@@ -40,12 +40,6 @@ export const MENU_ITEMS: Record<string, MenuItem[]> = {
     { id:9, name:'Capuchino',                  category:'Café',       price:'Gs 14.000', description:'Espresso con espuma de leche y toque de canela',               emoji:'☕', active:false, featured:false },
     { id:10,name:'Medialunas',                 category:'Panadería',  price:'Gs 8.000',  description:'3 medialunas de manteca, doradas y suaves',                    emoji:'🥐', active:true,  featured:false },
   ],
-  'la-pelu': [
-    { id:1, name:'Corte clásico',      category:'Cortes',   price:'Gs 40.000', description:'Corte personalizado con tijera o máquina', emoji:'✂️', active:true, featured:true  },
-    { id:2, name:'Barba',              category:'Barba',    price:'Gs 30.000', description:'Arreglo y perfilado de barba con navaja',   emoji:'🪒', active:true, featured:true  },
-    { id:3, name:'Combo corte+barba',  category:'Combos',   price:'Gs 60.000', description:'Corte clásico + arreglo de barba completo', emoji:'💈', active:true, featured:true  },
-    { id:4, name:'Corte niños',        category:'Cortes',   price:'Gs 25.000', description:'Corte para menores de 12 años',            emoji:'👦', active:true, featured:false },
-  ],
   'divina-skybar': [
     { id:1, name:'Mesa terraza',      category:'Mesas',    price:'Gs 0',       description:'Reserva de mesa en terraza rooftop',       emoji:'🌆', active:true, featured:true  },
     { id:2, name:'Mesa interior',     category:'Mesas',    price:'Gs 0',       description:'Reserva de mesa en salón climatizado',     emoji:'🍸', active:true, featured:false },
@@ -75,13 +69,6 @@ export const CRM_CONTACTS: Record<string, CRMContact[]> = {
     { id:6,  name:'Pablo Torres',     email:'pablo.t@gmail.com',   phone:'0986 111 333', visits:2,  lastVisit:'2026-05-10', totalSpent:'Gs 70.000',  notes:'Nuevo cliente' },
     { id:7,  name:'Valentina Ríos',   email:'vrios@gmail.com',     phone:'0987 222 444', visits:4,  lastVisit:'2026-05-08', totalSpent:'Gs 140.000', notes:'Aniversario en mayo' },
     { id:8,  name:'Sebastián Núñez',  email:'snunez@gmail.com',    phone:'0988 333 555', visits:9,  lastVisit:'2026-05-21', totalSpent:'Gs 315.000', notes:'Grupo empresarial' },
-  ],
-  'la-pelu': [
-    { id:1,  name:'Rodrigo Medina',   email:'rmedina@gmail.com',   phone:'0982 555 777', visits:18, lastVisit:'2026-05-22', totalSpent:'Gs 720.000', notes:'Cliente fijo cada 2 semanas' },
-    { id:2,  name:'Camila Ríos',      email:'crios@gmail.com',     phone:'0983 666 888', visits:6,  lastVisit:'2026-05-22', totalSpent:'Gs 180.000', notes:'' },
-    { id:3,  name:'Agustín López',    email:'agus.l@gmail.com',    phone:'0984 777 999', visits:10, lastVisit:'2026-05-19', totalSpent:'Gs 400.000', notes:'' },
-    { id:4,  name:'Tomás Gutiérrez',  email:'tgut@gmail.com',      phone:'0985 888 000', visits:4,  lastVisit:'2026-05-18', totalSpent:'Gs 160.000', notes:'' },
-    { id:5,  name:'Facundo Ibáñez',   email:'facundo.i@gmail.com', phone:'0986 999 111', visits:7,  lastVisit:'2026-05-17', totalSpent:'Gs 280.000', notes:'Prefiere barba larga' },
   ],
   'divina-skybar': [
     { id:1,  name:'Matías Fernández', email:'mfernandez@gmail.com',phone:'0987 000 222', visits:22, lastVisit:'2026-05-22', totalSpent:'Gs 3.300.000', notes:'VIP, organiza eventos corporativos' },
@@ -124,22 +111,6 @@ export const SEO_DATA: Record<string, {
       { page:'/reservar',     views:1340, bounce:'18%' },
       { page:'/galeria',      views:890,  bounce:'42%' },
       { page:'/contacto',     views:620,  bounce:'55%' },
-    ],
-  },
-  'la-pelu': {
-    visits: [180, 210, 195, 230, 260, 245, 290, 275, 310, 295, 340, 360],
-    labels: ['Jun','Jul','Ago','Sep','Oct','Nov','Dic','Ene','Feb','Mar','Abr','May'],
-    sources: [
-      { name:'Google',      pct:42, color:'#6366f1' },
-      { name:'Instagram',   pct:38, color:'#8b5cf6' },
-      { name:'Directo',     pct:12, color:'#10b981' },
-      { name:'WhatsApp',    pct:8,  color:'#f59e0b' },
-    ],
-    pages: [
-      { page:'/',           views:1240, bounce:'31%' },
-      { page:'/servicios',  views:980,  bounce:'26%' },
-      { page:'/reservar',   views:760,  bounce:'15%' },
-      { page:'/galeria',    views:420,  bounce:'48%' },
     ],
   },
   'divina-skybar': {

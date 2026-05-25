@@ -1,10 +1,14 @@
 const NOTION_VERSION = '2022-06-28';
 
 const DB = {
-  menu:       'bfcd74dc-ee82-484c-bc51-5156462166d6',
-  categories: 'a2c5a8c9-9d48-4274-8a6e-b7b9b557a759',
-  reservas:   'a35bfc4f-7cd6-41cd-a264-5315d75a03d0',
-  tenants:    'c52d2d58-6f3a-463a-b347-dc5dda3f0e9b',
+  menu:        'bfcd74dc-ee82-484c-bc51-5156462166d6',
+  categories:  'a2c5a8c9-9d48-4274-8a6e-b7b9b557a759',
+  reservas:    'a35bfc4f-7cd6-41cd-a264-5315d75a03d0',
+  tenants:     'c52d2d58-6f3a-463a-b347-dc5dda3f0e9b',
+  horarios:    '80246a64-2a6d-4de7-a85f-692a3faca333',
+  galeria:     'ed962b28-575f-4fc3-b69d-d1640b43d97a',
+  testimonios: 'ac829574-7508-4a95-9308-5281ef11e95b',
+  promociones: '6558132f-a2cd-4b74-b4c0-695ff0899ac6',
 };
 
 // slug → Notion page ID for tenant record
@@ -254,4 +258,295 @@ export async function createReservation(tenant: string, data: {
     'Notas':         { rich_text: [{ text: { content: data.notas ?? '' } }] },
     'Tenant':        { relation: [{ id: tenantId }] },
   });
+}
+
+// ─── Horarios ─────────────────────────────────────────────────────────────────
+
+export type NotionHorario = {
+  id: string;
+  dia: string;
+  horaApertura: string;
+  horaCierre: string;
+  cerrado: boolean;
+  nota: string;
+  orden: number;
+};
+
+export async function getHorarios(tenant: string): Promise<NotionHorario[]> {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.horarios,
+    { property: 'Tenant', relation: { contains: tenantId } },
+    [{ property: 'Orden', direction: 'ascending' }],
+  );
+  return rows.map((p: any) => ({
+    id:           p.id,
+    dia:          p.properties['Día']?.title?.[0]?.plain_text ?? '',
+    horaApertura: p.properties['Hora Apertura']?.rich_text?.[0]?.plain_text ?? '',
+    horaCierre:   p.properties['Hora Cierre']?.rich_text?.[0]?.plain_text ?? '',
+    cerrado:      p.properties['Cerrado']?.checkbox ?? false,
+    nota:         p.properties['Nota']?.rich_text?.[0]?.plain_text ?? '',
+    orden:        p.properties['Orden']?.number ?? 0,
+  }));
+}
+
+export async function createHorario(tenant: string, data: {
+  dia: string; horaApertura: string; horaCierre: string;
+  cerrado?: boolean; nota?: string; orden?: number;
+}) {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.horarios, {
+    'Día':           { title: [{ text: { content: data.dia } }] },
+    'Hora Apertura': { rich_text: [{ text: { content: data.horaApertura } }] },
+    'Hora Cierre':   { rich_text: [{ text: { content: data.horaCierre } }] },
+    'Cerrado':       { checkbox: data.cerrado ?? false },
+    'Nota':          { rich_text: [{ text: { content: data.nota ?? '' } }] },
+    'Orden':         { number: data.orden ?? 0 },
+    'Tenant':        { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateHorario(pageId: string, fields: Partial<{
+  dia: string; horaApertura: string; horaCierre: string; cerrado: boolean; nota: string;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.dia          !== undefined) props['Día']           = { title: [{ text: { content: fields.dia } }] };
+  if (fields.horaApertura !== undefined) props['Hora Apertura'] = { rich_text: [{ text: { content: fields.horaApertura } }] };
+  if (fields.horaCierre   !== undefined) props['Hora Cierre']   = { rich_text: [{ text: { content: fields.horaCierre } }] };
+  if (fields.cerrado      !== undefined) props['Cerrado']       = { checkbox: fields.cerrado };
+  if (fields.nota         !== undefined) props['Nota']          = { rich_text: [{ text: { content: fields.nota } }] };
+  return patchPage(pageId, props);
+}
+
+export async function deleteHorario(pageId: string) {
+  return archivePage(pageId);
+}
+
+// ─── Galería ──────────────────────────────────────────────────────────────────
+
+export type NotionGaleriaItem = {
+  id: string;
+  titulo: string;
+  urlImagen: string;
+  altText: string;
+  seccion: string;
+  activo: boolean;
+  orden: number;
+};
+
+export async function getGaleria(tenant: string): Promise<NotionGaleriaItem[]> {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.galeria,
+    { property: 'Tenant', relation: { contains: tenantId } },
+    [{ property: 'Orden', direction: 'ascending' }],
+  );
+  return rows.map((p: any) => ({
+    id:        p.id,
+    titulo:    p.properties['Título']?.title?.[0]?.plain_text ?? '',
+    urlImagen: p.properties['URL Imagen']?.url ?? '',
+    altText:   p.properties['Alt Text']?.rich_text?.[0]?.plain_text ?? '',
+    seccion:   p.properties['Sección']?.select?.name ?? 'Galería',
+    activo:    p.properties['Activo']?.checkbox ?? false,
+    orden:     p.properties['Orden']?.number ?? 0,
+  }));
+}
+
+export async function createGaleriaItem(tenant: string, data: {
+  titulo: string; urlImagen: string; altText?: string;
+  seccion?: string; orden?: number;
+}) {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.galeria, {
+    'Título':     { title: [{ text: { content: data.titulo } }] },
+    'URL Imagen': { url: data.urlImagen || null },
+    'Alt Text':   { rich_text: [{ text: { content: data.altText ?? '' } }] },
+    'Sección':    { select: { name: data.seccion ?? 'Galería' } },
+    'Activo':     { checkbox: true },
+    'Orden':      { number: data.orden ?? 0 },
+    'Tenant':     { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateGaleriaItem(pageId: string, fields: Partial<{
+  titulo: string; urlImagen: string; altText: string;
+  seccion: string; activo: boolean; orden: number;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.titulo     !== undefined) props['Título']     = { title: [{ text: { content: fields.titulo } }] };
+  if (fields.urlImagen  !== undefined) props['URL Imagen'] = { url: fields.urlImagen || null };
+  if (fields.altText    !== undefined) props['Alt Text']   = { rich_text: [{ text: { content: fields.altText } }] };
+  if (fields.seccion    !== undefined) props['Sección']    = { select: { name: fields.seccion } };
+  if (fields.activo     !== undefined) props['Activo']     = { checkbox: fields.activo };
+  if (fields.orden      !== undefined) props['Orden']      = { number: fields.orden };
+  return patchPage(pageId, props);
+}
+
+export async function deleteGaleriaItem(pageId: string) {
+  return archivePage(pageId);
+}
+
+// ─── Testimonios ──────────────────────────────────────────────────────────────
+
+export type NotionTestimonio = {
+  id: string;
+  nombre: string;
+  testimonio: string;
+  calificacion: number;
+  contexto: string;
+  plataforma: string;
+  activo: boolean;
+};
+
+export async function getTestimonios(tenant: string): Promise<NotionTestimonio[]> {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.testimonios,
+    {
+      and: [
+        { property: 'Tenant', relation: { contains: tenantId } },
+        { property: 'Activo', checkbox: { equals: true } },
+      ],
+    },
+  );
+  return rows.map((p: any) => ({
+    id:           p.id,
+    nombre:       p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    testimonio:   p.properties['Testimonio']?.rich_text?.[0]?.plain_text ?? '',
+    calificacion: p.properties['Calificación']?.number ?? 5,
+    contexto:     p.properties['Cargo o contexto']?.rich_text?.[0]?.plain_text ?? '',
+    plataforma:   p.properties['Plataforma']?.select?.name ?? 'Google',
+    activo:       p.properties['Activo']?.checkbox ?? false,
+  }));
+}
+
+export async function getTestimoniosAll(tenant: string): Promise<NotionTestimonio[]> {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.testimonios,
+    { property: 'Tenant', relation: { contains: tenantId } },
+  );
+  return rows.map((p: any) => ({
+    id:           p.id,
+    nombre:       p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    testimonio:   p.properties['Testimonio']?.rich_text?.[0]?.plain_text ?? '',
+    calificacion: p.properties['Calificación']?.number ?? 5,
+    contexto:     p.properties['Cargo o contexto']?.rich_text?.[0]?.plain_text ?? '',
+    plataforma:   p.properties['Plataforma']?.select?.name ?? 'Google',
+    activo:       p.properties['Activo']?.checkbox ?? false,
+  }));
+}
+
+export async function createTestimonio(tenant: string, data: {
+  nombre: string; testimonio: string; calificacion?: number;
+  contexto?: string; plataforma?: string;
+}) {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.testimonios, {
+    'Nombre':           { title: [{ text: { content: data.nombre } }] },
+    'Testimonio':       { rich_text: [{ text: { content: data.testimonio } }] },
+    'Calificación':     { number: data.calificacion ?? 5 },
+    'Cargo o contexto': { rich_text: [{ text: { content: data.contexto ?? '' } }] },
+    'Plataforma':       { select: { name: data.plataforma ?? 'Google' } },
+    'Activo':           { checkbox: true },
+    'Tenant':           { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateTestimonio(pageId: string, fields: Partial<{
+  nombre: string; testimonio: string; calificacion: number;
+  contexto: string; plataforma: string; activo: boolean;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.nombre       !== undefined) props['Nombre']           = { title: [{ text: { content: fields.nombre } }] };
+  if (fields.testimonio   !== undefined) props['Testimonio']       = { rich_text: [{ text: { content: fields.testimonio } }] };
+  if (fields.calificacion !== undefined) props['Calificación']     = { number: fields.calificacion };
+  if (fields.contexto     !== undefined) props['Cargo o contexto'] = { rich_text: [{ text: { content: fields.contexto } }] };
+  if (fields.plataforma   !== undefined) props['Plataforma']       = { select: { name: fields.plataforma } };
+  if (fields.activo       !== undefined) props['Activo']           = { checkbox: fields.activo };
+  return patchPage(pageId, props);
+}
+
+export async function deleteTestimonio(pageId: string) {
+  return archivePage(pageId);
+}
+
+// ─── Promociones ──────────────────────────────────────────────────────────────
+
+export type NotionPromocion = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  descuento: number;
+  tipo: string;
+  imagenUrl: string;
+  fechaInicio: string;
+  fechaFin: string;
+  activo: boolean;
+};
+
+export async function getPromociones(tenant: string): Promise<NotionPromocion[]> {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.promociones,
+    { property: 'Tenant', relation: { contains: tenantId } },
+  );
+  return rows.map((p: any) => ({
+    id:          p.id,
+    titulo:      p.properties['Título']?.title?.[0]?.plain_text ?? '',
+    descripcion: p.properties['Descripción']?.rich_text?.[0]?.plain_text ?? '',
+    descuento:   p.properties['Descuento']?.number ?? 0,
+    tipo:        p.properties['Tipo']?.select?.name ?? 'Especial',
+    imagenUrl:   p.properties['Imagen URL']?.url ?? '',
+    fechaInicio: p.properties['Fecha Inicio']?.date?.start ?? '',
+    fechaFin:    p.properties['Fecha Fin']?.date?.start ?? '',
+    activo:      p.properties['Activo']?.checkbox ?? false,
+  }));
+}
+
+export async function createPromocion(tenant: string, data: {
+  titulo: string; descripcion: string; descuento?: number;
+  tipo?: string; imagenUrl?: string; fechaInicio?: string; fechaFin?: string;
+}) {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.promociones, {
+    'Título':       { title: [{ text: { content: data.titulo } }] },
+    'Descripción':  { rich_text: [{ text: { content: data.descripcion } }] },
+    'Descuento':    { number: data.descuento ?? 0 },
+    'Tipo':         { select: { name: data.tipo ?? 'Especial' } },
+    'Imagen URL':   { url: data.imagenUrl || null },
+    'Fecha Inicio': data.fechaInicio ? { date: { start: data.fechaInicio } } : { date: null },
+    'Fecha Fin':    data.fechaFin    ? { date: { start: data.fechaFin    } } : { date: null },
+    'Activo':       { checkbox: true },
+    'Tenant':       { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updatePromocion(pageId: string, fields: Partial<{
+  titulo: string; descripcion: string; descuento: number;
+  tipo: string; imagenUrl: string; fechaInicio: string; fechaFin: string; activo: boolean;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.titulo       !== undefined) props['Título']       = { title: [{ text: { content: fields.titulo } }] };
+  if (fields.descripcion  !== undefined) props['Descripción']  = { rich_text: [{ text: { content: fields.descripcion } }] };
+  if (fields.descuento    !== undefined) props['Descuento']    = { number: fields.descuento };
+  if (fields.tipo         !== undefined) props['Tipo']         = { select: { name: fields.tipo } };
+  if (fields.imagenUrl    !== undefined) props['Imagen URL']   = { url: fields.imagenUrl || null };
+  if (fields.fechaInicio  !== undefined) props['Fecha Inicio'] = fields.fechaInicio ? { date: { start: fields.fechaInicio } } : { date: null };
+  if (fields.fechaFin     !== undefined) props['Fecha Fin']    = fields.fechaFin    ? { date: { start: fields.fechaFin    } } : { date: null };
+  if (fields.activo       !== undefined) props['Activo']       = { checkbox: fields.activo };
+  return patchPage(pageId, props);
+}
+
+export async function deletePromocion(pageId: string) {
+  return archivePage(pageId);
 }

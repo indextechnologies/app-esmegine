@@ -1,10 +1,10 @@
 const NOTION_VERSION = '2022-06-28';
 
 const DB = {
-  menu:       'f969629d-8e8c-41c7-bbb9-e16ed6160ea4',
-  categories: '1b2a0b1e-6263-4f4d-b485-95bce0ddfb84',
-  reservas:   'cf9602fd-2c75-4aa7-84d8-2d68a13ea130',
-  tenants:    'e2572655-0b8f-49d4-8ba1-7ffb16d9500e',
+  menu:       'bfcd74dc-ee82-484c-bc51-5156462166d6',
+  categories: 'a2c5a8c9-9d48-4274-8a6e-b7b9b557a759',
+  reservas:   'a35bfc4f-7cd6-41cd-a264-5315d75a03d0',
+  tenants:    'c52d2d58-6f3a-463a-b347-dc5dda3f0e9b',
 };
 
 // slug → Notion page ID for tenant record

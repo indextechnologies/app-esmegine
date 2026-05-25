@@ -78,26 +78,7 @@ export type Reservation = {
   tenant: string;
 };
 
-export const RESERVATIONS: Reservation[] = [
-  { id:1,  client:'María García',      email:'mgarcia@gmail.com',    phone:'0981 111 222', service:'Mesa para 2',        date:'2026-05-22', time:'20:00', status:'confirmed', notes:'',                       tenant:'bom-pain' },
-  { id:2,  client:'Carlos Rodríguez',  email:'carlos.r@gmail.com',   phone:'0982 333 444', service:'Desayuno buffet',    date:'2026-05-22', time:'08:30', status:'confirmed', notes:'Alergias: lactosa',      tenant:'bom-pain' },
-  { id:3,  client:'Ana López',         email:'ana.lopez@gmail.com',  phone:'0983 555 666', service:'Almuerzo ejecutivo', date:'2026-05-23', time:'12:00', status:'pending',   notes:'',                       tenant:'bom-pain' },
-  { id:4,  client:'Diego Martínez',    email:'diego.m@outlook.com',  phone:'0984 777 888', service:'Mesa para 4',        date:'2026-05-23', time:'21:00', status:'pending',   notes:'Cumpleaños',             tenant:'bom-pain' },
-  { id:5,  client:'Sofía Fernández',   email:'sofi.f@gmail.com',     phone:'0985 999 000', service:'Desayuno buffet',    date:'2026-05-24', time:'09:00', status:'confirmed', notes:'',                       tenant:'bom-pain' },
-  { id:6,  client:'Pablo Torres',      email:'pablo.t@gmail.com',    phone:'0986 111 333', service:'Almuerzo ejecutivo', date:'2026-05-25', time:'12:30', status:'confirmed', notes:'',                       tenant:'bom-pain' },
-  { id:7,  client:'Valentina Ríos',    email:'vrios@gmail.com',      phone:'0987 222 444', service:'Mesa para 2',        date:'2026-05-26', time:'20:30', status:'pending',   notes:'Aniversario',            tenant:'bom-pain' },
-  { id:8,  client:'Sebastián Núñez',   email:'snunez@gmail.com',     phone:'0988 333 555', service:'Cena especial',      date:'2026-05-27', time:'21:00', status:'confirmed', notes:'',                       tenant:'bom-pain' },
-  { id:9,  client:'Lucía Herrera',     email:'lucia.h@gmail.com',    phone:'0981 444 666', service:'Desayuno buffet',    date:'2026-05-20', time:'08:00', status:'cancelled', notes:'',                       tenant:'bom-pain' },
-  { id:10, client:'Rodrigo Medina',    email:'rmedina@gmail.com',    phone:'0982 555 777', service:'Corte clásico',      date:'2026-05-22', time:'10:00', status:'confirmed', notes:'',                       tenant:'la-pelu' },
-  { id:11, client:'Camila Ríos',       email:'crios@gmail.com',      phone:'0983 666 888', service:'Barba',              date:'2026-05-22', time:'11:00', status:'confirmed', notes:'',                       tenant:'la-pelu' },
-  { id:12, client:'Agustín López',     email:'agus.l@gmail.com',     phone:'0984 777 999', service:'Combo corte+barba',  date:'2026-05-23', time:'09:30', status:'pending',   notes:'',                       tenant:'la-pelu' },
-  { id:13, client:'Tomás Gutiérrez',   email:'tgut@gmail.com',       phone:'0985 888 000', service:'Corte clásico',      date:'2026-05-23', time:'10:30', status:'confirmed', notes:'',                       tenant:'la-pelu' },
-  { id:14, client:'Facundo Ibáñez',    email:'facundo.i@gmail.com',  phone:'0986 999 111', service:'Barba',              date:'2026-05-24', time:'09:00', status:'pending',   notes:'',                       tenant:'la-pelu' },
-  { id:15, client:'Matías Fernández',  email:'mfernandez@gmail.com', phone:'0987 000 222', service:'Mesa terraza VIP',   date:'2026-05-22', time:'21:30', status:'confirmed', notes:'Reserva VIP',            tenant:'divina-skybar' },
-  { id:16, client:'Florencia Sosa',    email:'flor.s@gmail.com',     phone:'0988 111 333', service:'Mesa terraza',       date:'2026-05-23', time:'21:00', status:'pending',   notes:'',                       tenant:'divina-skybar' },
-  { id:17, client:'Nicolás Castro',    email:'ncastro@gmail.com',    phone:'0989 222 444', service:'Reserva VIP',        date:'2026-05-24', time:'22:00', status:'confirmed', notes:'Evento privado 20p',     tenant:'divina-skybar' },
-  { id:18, client:'Juliana Acosta',    email:'juliana.a@gmail.com',  phone:'0981 333 555', service:'Mesa interior',      date:'2026-05-25', time:'20:30', status:'confirmed', notes:'',                       tenant:'divina-skybar' },
-];
+export const RESERVATIONS: Reservation[] = [];
 
 export type MenuItem = {
   id: number;

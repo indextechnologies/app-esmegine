@@ -5,6 +5,7 @@ import {
   DashIcon, ResIcon, UsersIcon, GlobeIcon,
   BarChartIcon, SettingsIcon, CRMIcon, ArrowLeft,
 } from './Icons';
+import { useClients } from '../lib/use-clients';
 
 type Props =
   | { mode: 'admin' }
@@ -21,6 +22,8 @@ export default function Sidebar(props: Props) {
     }
     router.push('/login');
   }
+
+  const { clients } = useClients();
 
   if (props.mode === 'admin') {
     const links = [
@@ -57,11 +60,10 @@ export default function Sidebar(props: Props) {
             ))}
 
             <div className="sb-sec" style={{ marginTop: 20 }}>Vista rápida</div>
-            <div style={{ padding: '0 10px', fontSize: 12, color: 'var(--text-3)' }}>Accedé a un cliente:</div>
-            {['bom-pain', 'la-pelu', 'divina-skybar'].map(slug => (
-              <Link key={slug} href={`/${slug}/dashboard`} className="sb-item" style={{ fontSize: 12 }}>
-                <span style={{ width: 16, textAlign: 'center' }}>›</span>
-                {slug}
+            {clients.filter(c => c.active).map(c => (
+              <Link key={c.slug} href={`/${c.slug}/dashboard`} className="sb-item" style={{ fontSize: 12 }}>
+                <span style={{ width: 16, textAlign: 'center', fontSize: 14 }}>{c.emoji}</span>
+                {c.name}
               </Link>
             ))}
           </nav>

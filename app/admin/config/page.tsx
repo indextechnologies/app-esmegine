@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { CLIENTS } from '../../../lib/demo-data';
+import { useClients } from '../../../lib/use-clients';
 
 export default function AdminConfigPage() {
+  const { clients } = useClients();
   const [toast, setToast] = useState('');
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
 
@@ -32,7 +33,7 @@ export default function AdminConfigPage() {
 
         <div className="card">
           <div className="card-hd"><div className="card-title">Clientes activos</div></div>
-          {CLIENTS.map(c => (
+          {clients.map(c => (
             <div key={c.slug} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid var(--border)' }}>
               <span style={{ fontSize:18 }}>{c.emoji}</span>
               <div style={{ flex:1 }}>

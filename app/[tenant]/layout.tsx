@@ -2,7 +2,7 @@
 import { useParams, usePathname } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
 import { BellIcon } from '../../components/Icons';
-import { CLIENTS } from '../../lib/demo-data';
+import { useClient } from '../../lib/use-clients';
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard:  'Inicio',
@@ -16,15 +16,18 @@ const PAGE_TITLES: Record<string, string> = {
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const { tenant } = useParams<{ tenant: string }>();
   const path = usePathname();
-  const client = CLIENTS.find(c => c.slug === tenant);
+  const { client, loading } = useClient(tenant);
 
-  if (!client) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-3)' }}>
-        Cliente no encontrado
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-3)' }}>
+      Cargando…
+    </div>
+  );
+  if (!client) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-3)' }}>
+      Cliente no encontrado
+    </div>
+  );
 
   const segment = path.split('/').pop() ?? '';
   const pageTitle = PAGE_TITLES[segment] ?? client.name;

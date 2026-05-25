@@ -1,11 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { CLIENTS } from '../../../lib/demo-data';
+import { useClient } from '../../../lib/use-clients';
 
 export default function TenantConfigPage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const client = CLIENTS.find(c => c.slug === tenant);
+  const { client } = useClient(tenant);
   const [toast, setToast] = useState('');
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }

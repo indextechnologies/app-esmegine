@@ -12,10 +12,85 @@ const DB = {
   instagram:   'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
 };
 
-// slug → Notion page ID for tenant record
-const TENANT_PAGE: Record<string, string> = {
-  'bom-pain': '36b1d5510e648197bc24e487ebaa79a5',
+// ─── Tenant cache (populated lazily from Notion) ────────────────────────────
+
+let _tenantCache: Map<string, string> | null = null;
+
+async function loadTenantCache(): Promise<Map<string, string>> {
+  if (_tenantCache) return _tenantCache;
+  const rows = await queryDB(DB.tenants, undefined, []);
+  const map = new Map<string, string>();
+  for (const p of rows) {
+    const slug = p.properties['Slug']?.rich_text?.[0]?.plain_text ?? '';
+    if (slug) map.set(slug, p.id.replace(/-/g, ''));
+  }
+  _tenantCache = map;
+  return map;
+}
+
+async function getTenantPageId(slug: string): Promise<string | null> {
+  const cache = await loadTenantCache();
+  return cache.get(slug) ?? null;
+}
+
+// ─── Client type & getClients ────────────────────────────────────────────────
+
+export type NotionClient = {
+  id:        string;
+  slug:      string;
+  name:      string;
+  industry:  string;
+  emoji:     string;
+  color:     string;
+  colorBg:   string;
+  website:   string;
+  phone:     string;
+  email:     string;
+  address:   string;
+  instagram: string;
+  plan:      string;
+  active:    boolean;
+  since:     string;
 };
+
+const EMOJI_MAP: Record<string, string> = {
+  cafe: '☕', cafeteria: '☕', barbershop: '✂️', bar: '🍸',
+  rooftop: '🌆', heladeria: '🍦', restaurante: '🍽️', salon: '💇',
+  tienda: '🛍️', boutique: '👗',
+};
+function industryEmoji(industry: string) {
+  const key = (industry ?? '').toLowerCase().split(/[\s·,/]+/)[0];
+  return EMOJI_MAP[key] ?? '🏪';
+}
+function hexToRgba(hex: string, a: number) {
+  const c = hex.replace('#', '');
+  return `rgba(${parseInt(c.slice(0,2),16)},${parseInt(c.slice(2,4),16)},${parseInt(c.slice(4,6),16)},${a})`;
+}
+
+export async function getClients(): Promise<NotionClient[]> {
+  const rows = await queryDB(DB.tenants, undefined, [{ property: 'Nombre', direction: 'ascending' }]);
+  return rows.map((p: any) => {
+    const color    = p.properties['Color Principal']?.rich_text?.[0]?.plain_text ?? '#6366f1';
+    const industry = p.properties['Industria']?.select?.name ?? '';
+    return {
+      id:        p.id.replace(/-/g, ''),
+      slug:      p.properties['Slug']?.rich_text?.[0]?.plain_text ?? '',
+      name:      p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+      industry,
+      emoji:     industryEmoji(industry),
+      color,
+      colorBg:   hexToRgba(color, 0.14),
+      website:   p.properties['URL Website']?.url ?? '',
+      phone:     p.properties['Teléfono']?.phone_number ?? '',
+      email:     p.properties['Email']?.email ?? '',
+      address:   p.properties['Dirección']?.rich_text?.[0]?.plain_text ?? '',
+      instagram: p.properties['Instagram']?.rich_text?.[0]?.plain_text ?? '',
+      plan:      'Standard',
+      active:    p.properties['Estado']?.select?.name === 'activo',
+      since:     (p.properties['Desde']?.date?.start ?? '').slice(0, 7),
+    };
+  });
+}
 
 function notionHeaders() {
   return {
@@ -107,7 +182,7 @@ export type NotionReservation = {
 // ─── Menu ────────────────────────────────────────────────────────────────────
 
 export async function getMenuItems(tenant: string): Promise<NotionMenuItem[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.menu,
@@ -130,7 +205,7 @@ export async function getMenuItems(tenant: string): Promise<NotionMenuItem[]> {
 }
 
 export async function getCategories(tenant: string): Promise<NotionCategory[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.categories,
@@ -150,7 +225,7 @@ export async function getCategories(tenant: string): Promise<NotionCategory[]> {
 export async function createCategory(tenant: string, data: {
   nombre: string; icono: string;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.categories, {
     'Nombre': { title: [{ text: { content: data.nombre } }] },
@@ -194,7 +269,7 @@ export async function updateMenuItem(pageId: string, fields: Partial<{
 export async function createMenuItem(tenant: string, data: {
   nombre: string; descripcion: string; precio: number; categoriaId: string;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.menu, {
     'Nombre':       { title: [{ text: { content: data.nombre } }] },
@@ -215,7 +290,7 @@ export async function deleteMenuItem(pageId: string) {
 // ─── Reservations ────────────────────────────────────────────────────────────
 
 export async function getReservations(tenant: string): Promise<NotionReservation[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.reservas,
@@ -247,7 +322,7 @@ export async function createReservation(tenant: string, data: {
   nombre: string; email: string; telefono: string;
   fecha: string; hora: string; notas?: string;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.reservas, {
     'Resumen':       { title: [{ text: { content: `Reserva — ${data.nombre}` } }] },
@@ -274,7 +349,7 @@ export type NotionHorario = {
 };
 
 export async function getHorarios(tenant: string): Promise<NotionHorario[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.horarios,
@@ -296,7 +371,7 @@ export async function createHorario(tenant: string, data: {
   dia: string; horaApertura: string; horaCierre: string;
   cerrado?: boolean; nota?: string; orden?: number;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.horarios, {
     'Día':           { title: [{ text: { content: data.dia } }] },
@@ -338,7 +413,7 @@ export type NotionGaleriaItem = {
 };
 
 export async function getGaleria(tenant: string): Promise<NotionGaleriaItem[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.galeria,
@@ -360,7 +435,7 @@ export async function createGaleriaItem(tenant: string, data: {
   titulo: string; urlImagen: string; altText?: string;
   seccion?: string; orden?: number;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.galeria, {
     'Título':     { title: [{ text: { content: data.titulo } }] },
@@ -404,7 +479,7 @@ export type NotionTestimonio = {
 };
 
 export async function getTestimonios(tenant: string): Promise<NotionTestimonio[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.testimonios,
@@ -427,7 +502,7 @@ export async function getTestimonios(tenant: string): Promise<NotionTestimonio[]
 }
 
 export async function getTestimoniosAll(tenant: string): Promise<NotionTestimonio[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.testimonios,
@@ -448,7 +523,7 @@ export async function createTestimonio(tenant: string, data: {
   nombre: string; testimonio: string; calificacion?: number;
   contexto?: string; plataforma?: string;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.testimonios, {
     'Nombre':           { title: [{ text: { content: data.nombre } }] },
@@ -494,7 +569,7 @@ export type NotionPromocion = {
 };
 
 export async function getPromociones(tenant: string): Promise<NotionPromocion[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.promociones,
@@ -517,7 +592,7 @@ export async function createPromocion(tenant: string, data: {
   titulo: string; descripcion: string; descuento?: number;
   tipo?: string; imagenUrl?: string; fechaInicio?: string; fechaFin?: string;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.promociones, {
     'Título':       { title: [{ text: { content: data.titulo } }] },
@@ -564,7 +639,7 @@ export type NotionInstagramLink = {
 };
 
 export async function getInstagramLinks(tenant: string): Promise<NotionInstagramLink[]> {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) return [];
   const rows = await queryDB(
     DB.instagram,
@@ -584,7 +659,7 @@ export async function getInstagramLinks(tenant: string): Promise<NotionInstagram
 export async function createInstagramLink(tenant: string, data: {
   titulo: string; urlPost: string; orden?: number; tipo?: string;
 }) {
-  const tenantId = TENANT_PAGE[tenant];
+  const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.instagram, {
     'Descripción': { title: [{ text: { content: data.titulo } }] },

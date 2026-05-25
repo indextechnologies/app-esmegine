@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { CLIENTS } from '../../../lib/demo-data';
+import { useClient } from '../../../lib/use-clients';
 import { PlusIcon, EditIcon, TrashIcon, ExternalIcon, UtensilsIcon, SunIcon, ClockIcon, MessageIcon, ImageIcon, TagIcon, FileTextIcon, CameraIcon } from '../../../components/Icons';
 
 type Category    = { id: string; nombre: string; icono: string; orden: number; activo: boolean; modoVista: boolean; };
@@ -16,7 +16,7 @@ type IgLink = { id: string; titulo: string; urlPost: string; activo: boolean; or
 
 export default function WebsitePage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const client = CLIENTS.find(c => c.slug === tenant);
+  const { client } = useClient(tenant);
 
   const [tab, setTab]             = useState<Tab>('menu');
   const [items, setItems]         = useState<MenuItem[]>([]);

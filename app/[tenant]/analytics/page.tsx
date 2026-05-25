@@ -1,10 +1,11 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { CLIENTS, SEO_DATA } from '../../../lib/demo-data';
+import { SEO_DATA } from '../../../lib/demo-data';
+import { useClient } from '../../../lib/use-clients';
 
 export default function AnalyticsPage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const client  = CLIENTS.find(c => c.slug === tenant);
+  const { client } = useClient(tenant);
   const seo     = SEO_DATA[tenant as string] ?? SEO_DATA['bom-pain'];
 
   const maxVisit  = Math.max(...seo.visits);

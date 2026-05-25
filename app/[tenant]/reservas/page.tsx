@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { CLIENTS } from '../../../lib/demo-data';
+import { useClient } from '../../../lib/use-clients';
 import { PlusIcon, CalIcon } from '../../../components/Icons';
 
 type Reservation = {
@@ -35,7 +35,7 @@ const CHIPS = [
 
 export default function ReservasPage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const client = CLIENTS.find(c => c.slug === tenant);
+  const { client } = useClient(tenant);
 
   const [data, setData]       = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);

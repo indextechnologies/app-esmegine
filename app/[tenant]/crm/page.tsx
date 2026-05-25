@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { CLIENTS, CRM_CONTACTS, RESERVATIONS, type CRMContact } from '../../../lib/demo-data';
+import { CRM_CONTACTS, RESERVATIONS, type CRMContact } from '../../../lib/demo-data';
+import { useClient } from '../../../lib/use-clients';
 import { PlusIcon, EditIcon } from '../../../components/Icons';
 
 export default function CRMPage() {
   const { tenant } = useParams<{ tenant: string }>();
-  const client = CLIENTS.find(c => c.slug === tenant);
+  const { client } = useClient(tenant);
   const base   = CRM_CONTACTS[tenant as string] ?? [];
 
   const [contacts, setContacts] = useState<CRMContact[]>([...base]);

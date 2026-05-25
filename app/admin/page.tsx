@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CLIENTS } from '../../lib/demo-data';
+import { useClients } from '../../lib/use-clients';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -36,25 +36,27 @@ function statusColor(estado: string) {
 }
 
 export default function AdminDashboard() {
+  const { clients }             = useClients();
   const [reservations, setReservations] = useState<LiveRes[]>([]);
 
   useEffect(() => {
+    if (!clients.length) return;
     Promise.all(
-      CLIENTS.map(c =>
+      clients.map(c =>
         fetch(`/api/${c.slug}/reservas`)
           .then(r => r.ok ? r.json() : [])
           .then((data: Omit<LiveRes, 'tenant'>[]) => data.map(r => ({ ...r, tenant: c.slug })))
           .catch(() => [] as LiveRes[])
       )
     ).then(results => setReservations(results.flat()));
-  }, []);
+  }, [clients]);
 
-  const active  = CLIENTS.filter(c => c.active).length;
+  const active  = clients.filter(c => c.active).length;
   const todayRs = reservations.filter(r => r.fecha === TODAY).length;
   const pending = reservations.filter(r => r.estado === 'Pendiente').length;
   const total   = reservations.length;
 
-  const byClient = CLIENTS.map(c => ({
+  const byClient = clients.map(c => ({
     ...c,
     count: reservations.filter(r => r.tenant === c.slug).length,
     today: reservations.filter(r => r.tenant === c.slug && r.fecha === TODAY).length,

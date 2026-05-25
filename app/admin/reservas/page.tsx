@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { CLIENTS } from '../../../lib/demo-data';
+import { useClients } from '../../../lib/use-clients';
 import { PlusIcon } from '../../../components/Icons';
 
 type LiveRes = {
@@ -23,11 +23,14 @@ export default function AdminReservasPage() {
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
 
+  const { clients } = useClients();
+
   const load = useCallback(async () => {
+    if (!clients.length) return;
     setLoading(true);
     try {
       const results = await Promise.all(
-        CLIENTS.map(c =>
+        clients.map(c =>
           fetch(`/api/${c.slug}/reservas`)
             .then(r => r.ok ? r.json() : [])
             .then((rows: Omit<LiveRes, 'tenant'>[]) => rows.map(r => ({ ...r, tenant: c.slug })))
@@ -40,7 +43,7 @@ export default function AdminReservasPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, clients]);
 
   async function changeStatus(id: string, tenant: string, estado: string) {
     try {
@@ -99,7 +102,7 @@ export default function AdminReservasPage() {
         </select>
         <select className="f-select" value={fTenant} onChange={e => setFT(e.target.value)}>
           <option value="all">Todos los clientes</option>
-          {CLIENTS.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.name}</option>)}
+          {clients.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.name}</option>)}
         </select>
         <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={load}>
           <PlusIcon size={13} style={{ transform: 'rotate(45deg)' }} /> Actualizar
@@ -125,7 +128,7 @@ export default function AdminReservasPage() {
               {filtered.length === 0 ? (
                 <tr><td colSpan={6} className="empty">Sin resultados</td></tr>
               ) : filtered.map(r => {
-                const c = CLIENTS.find(cl => cl.slug === r.tenant);
+                const c = clients.find(cl => cl.slug === r.tenant);
                 return (
                   <tr key={r.id}>
                     <td>

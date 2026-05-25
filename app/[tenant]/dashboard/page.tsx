@@ -1,88 +1,73 @@
 'use client';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
-import { CLIENTS, RESERVATIONS } from '../../../lib/demo-data';
+import { useState, useEffect, useCallback } from 'react';
+import { useClient } from '../../../lib/use-clients';
 
 const TODAY = new Date().toISOString().slice(0, 10);
-const STATUS_LABEL: Record<string, string> = {
-  confirmed: 'Confirmada',
-  pending:   'Pendiente',
-  cancelled: 'Cancelada',
+
+type LiveRes = { id: string; nombreCliente: string; estado: string; fecha: string; hora: string; notas: string; };
+
+const ESTADO_BADGE: Record<string, string> = {
+  Confirmada: 'confirmed', Pendiente: 'pending',
+  Cancelada:  'cancelled', Completada: 'confirmed',
 };
 
 export default function TenantDashboard() {
   const { tenant } = useParams<{ tenant: string }>();
-  const client = CLIENTS.find(c => c.slug === tenant);
-  const allReservas = RESERVATIONS.filter(r => r.tenant === tenant);
+  const { client }  = useClient(tenant);
+  const [reservas, setReservas] = useState<LiveRes[]>([]);
 
-  const [statuses, setStatuses] = useState<Record<string, string>>({});
+  const load = useCallback(async () => {
+    const data = await fetch(`/api/${tenant}/reservas`).then(r => r.json()).catch(() => []);
+    setReservas(data);
+  }, [tenant]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function confirm(id: string) {
+    await fetch(`/api/${tenant}/reservas/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'Confirmada' }),
+    });
+    setReservas(prev => prev.map(r => r.id === id ? { ...r, estado: 'Confirmada' } : r));
+  }
+
+  const pending = reservas.filter(r => r.estado === 'Pendiente').length;
+  const todayRs = reservas.filter(r => r.fecha === TODAY).length;
+  const recent  = [...reservas].sort((a,b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora)).slice(0, 8);
+
+  const dateStr = new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+
   if (!client) return null;
-
-  const getStatus = (id: number | string, fallback: string) => statuses[String(id)] ?? fallback;
-
-  const pending = allReservas.filter(r => getStatus(r.id, r.status) === 'pending').length;
-  const todayRs = allReservas.filter(r => r.date === TODAY).length;
-
-  const recent = [...allReservas]
-    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
-    .slice(0, 8);
-
-  const dateStr = new Date().toLocaleDateString('es', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  });
 
   return (
     <>
-      {/* Greeting */}
-      <div className="a1" style={{ marginBottom: 18 }}>
+      <div style={{ marginBottom: 18 }}>
         <div className="pg-title">{client.emoji} {client.name}</div>
         <div className="pg-sub" style={{ textTransform: 'capitalize' }}>{dateStr}</div>
       </div>
 
-      {/* Hero stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }} className="a2">
-        <Link
-          href={`/${tenant}/reservas`}
-          className="today-hero"
-          style={{
-            background: pending > 0
-              ? 'linear-gradient(135deg,rgba(245,158,11,.14),rgba(245,158,11,.06))'
-              : 'linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.06))',
-            borderColor: pending > 0 ? 'rgba(245,158,11,.25)' : 'rgba(99,102,241,.22)',
-          }}
-        >
-          <div className="today-val" style={{ color: pending > 0 ? 'var(--yellow)' : '#a5b4fc' }}>
-            {pending}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <Link href={`/${tenant}/reservas`} className="today-hero"
+          style={{ background: pending > 0 ? 'linear-gradient(135deg,rgba(245,158,11,.14),rgba(245,158,11,.06))' : 'linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.06))', borderColor: pending > 0 ? 'rgba(245,158,11,.25)' : 'rgba(99,102,241,.22)' }}>
+          <div className="today-val" style={{ color: pending > 0 ? 'var(--yellow)' : '#a5b4fc' }}>{pending}</div>
           <div>
             <div className="today-label">{pending === 1 ? 'Pendiente' : 'Pendientes'}</div>
-            <div className="today-sub">
-              {pending > 0 ? 'Necesitan confirmación' : 'Todo confirmado ✓'}
-            </div>
+            <div className="today-sub">{pending > 0 ? 'Necesitan confirmación' : 'Todo confirmado ✓'}</div>
           </div>
         </Link>
-
-        <Link
-          href={`/${tenant}/reservas`}
-          className="today-hero"
-          style={{
-            background: 'linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.05))',
-            borderColor: 'rgba(16,185,129,.22)',
-          }}
-        >
+        <Link href={`/${tenant}/reservas`} className="today-hero"
+          style={{ background: 'linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.05))', borderColor: 'rgba(16,185,129,.22)' }}>
           <div className="today-val" style={{ color: 'var(--green)' }}>{todayRs}</div>
           <div>
             <div className="today-label">Hoy</div>
-            <div className="today-sub">
-              {todayRs === 0 ? 'Sin reservas hoy' : `${todayRs} ${todayRs === 1 ? 'reserva' : 'reservas'}`}
-            </div>
+            <div className="today-sub">{todayRs === 0 ? 'Sin reservas hoy' : `${todayRs} ${todayRs === 1 ? 'reserva' : 'reservas'}`}</div>
           </div>
         </Link>
       </div>
 
-      {/* Quick actions */}
-      <div className="quick-grid a3">
+      <div className="quick-grid">
         <Link href={`/${tenant}/website`} className="quick-card">
           <div className="quick-ic" style={{ background: 'rgba(99,102,241,.12)' }}>🌐</div>
           <div className="quick-label">Editar sitio</div>
@@ -100,54 +85,38 @@ export default function TenantDashboard() {
         </Link>
       </div>
 
-      {/* Recent reservations */}
-      <div className="card a4">
+      <div className="card">
         <div className="card-hd">
           <div className="card-title">Últimas reservas</div>
           <Link href={`/${tenant}/reservas`} className="card-link">Ver todas →</Link>
         </div>
-
         {recent.length === 0 ? (
           <div className="empty">Sin reservas aún</div>
         ) : (
           <div className="stagger">
-            {recent.map(r => {
-              const status = getStatus(r.id, r.status);
-              return (
-                <div key={r.id} className="res-row">
-                  <div className="res-av">{r.client.slice(0, 2).toUpperCase()}</div>
-                  <div className="res-info">
-                    <div className="res-name">{r.client}</div>
-                    <div className="res-meta">{r.service} · {r.time}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <span className={`badge badge-${status}`}>{STATUS_LABEL[status]}</span>
-                    {status === 'pending' && (
-                      <button
-                        className="abtn abtn-conf"
-                        onClick={() => setStatuses(p => ({ ...p, [String(r.id)]: 'confirmed' }))}
-                        title="Confirmar"
-                      >
-                        ✓
-                      </button>
-                    )}
-                  </div>
+            {recent.map(r => (
+              <div key={r.id} className="res-row">
+                <div className="res-av">{r.nombreCliente.slice(0, 2).toUpperCase()}</div>
+                <div className="res-info">
+                  <div className="res-name">{r.nombreCliente}</div>
+                  <div className="res-meta">{r.hora}{r.notas ? ` · ${r.notas}` : ''}</div>
                 </div>
-              );
-            })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <span className={`badge badge-${ESTADO_BADGE[r.estado] ?? 'pending'}`}>{r.estado}</span>
+                  {r.estado === 'Pendiente' && (
+                    <button className="abtn abtn-conf" onClick={() => confirm(r.id)} title="Confirmar">✓</button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Site link */}
       {client.website && (
-        <div style={{ marginTop: 14, textAlign: 'center' }} className="a4">
-          <a
-            href={client.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-          >
+        <div style={{ marginTop: 14, textAlign: 'center' }}>
+          <a href={client.website} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <span style={{ opacity: .6 }}>🌐</span> Ver sitio web público
           </a>
         </div>

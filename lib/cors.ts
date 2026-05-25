@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 
 const ALLOWED = [
+  'https://bompain.indexte.com',
+  'https://www.bompain.indexte.com',
   'https://demo-bompain.vercel.app',
   'https://app.indexte.com',
   'http://localhost:3000',

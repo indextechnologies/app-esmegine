@@ -19,7 +19,7 @@ export default function TenantDashboard() {
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   if (!client) return null;
 
-  const getStatus = (id: string, fallback: string) => statuses[id] ?? fallback;
+  const getStatus = (id: number | string, fallback: string) => statuses[String(id)] ?? fallback;
 
   const pending = allReservas.filter(r => getStatus(r.id, r.status) === 'pending').length;
   const todayRs = allReservas.filter(r => r.date === TODAY).length;
@@ -125,7 +125,7 @@ export default function TenantDashboard() {
                     {status === 'pending' && (
                       <button
                         className="abtn abtn-conf"
-                        onClick={() => setStatuses(p => ({ ...p, [r.id]: 'confirmed' }))}
+                        onClick={() => setStatuses(p => ({ ...p, [String(r.id)]: 'confirmed' }))}
                         title="Confirmar"
                       >
                         ✓

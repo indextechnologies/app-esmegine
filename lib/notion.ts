@@ -84,6 +84,7 @@ export type NotionCategory = {
   icono: string;
   orden: number;
   activo: boolean;
+  modoVista: boolean; // true = mostrar imagen, false = mostrar icono
 };
 
 export type NotionReservation = {
@@ -132,12 +133,42 @@ export async function getCategories(tenant: string): Promise<NotionCategory[]> {
     [{ property: 'Orden', direction: 'ascending' }],
   );
   return rows.map((p: any) => ({
-    id:     p.id,
-    nombre: p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
-    icono:  p.properties['Ícono']?.rich_text?.[0]?.plain_text ?? '🍽️',
-    orden:  p.properties['Orden']?.number ?? 0,
-    activo: p.properties['Activo']?.checkbox ?? false,
+    id:        p.id,
+    nombre:    p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    icono:     p.properties['Ícono']?.rich_text?.[0]?.plain_text ?? '🍽️',
+    orden:     p.properties['Orden']?.number ?? 0,
+    activo:    p.properties['Activo']?.checkbox ?? false,
+    modoVista: p.properties['Modo Vista']?.checkbox ?? false,
   }));
+}
+
+export async function createCategory(tenant: string, data: {
+  nombre: string; icono: string;
+}) {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.categories, {
+    'Nombre': { title: [{ text: { content: data.nombre } }] },
+    'Ícono':  { rich_text: [{ text: { content: data.icono } }] },
+    'Activo': { checkbox: true },
+    'Modo Vista': { checkbox: false },
+    'Tenant': { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateCategory(pageId: string, fields: Partial<{
+  nombre: string; icono: string; activo: boolean; modoVista: boolean;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.nombre    !== undefined) props['Nombre']     = { title: [{ text: { content: fields.nombre } }] };
+  if (fields.icono     !== undefined) props['Ícono']      = { rich_text: [{ text: { content: fields.icono } }] };
+  if (fields.activo    !== undefined) props['Activo']     = { checkbox: fields.activo };
+  if (fields.modoVista !== undefined) props['Modo Vista'] = { checkbox: fields.modoVista };
+  return patchPage(pageId, props);
+}
+
+export async function deleteCategory(pageId: string) {
+  return archivePage(pageId);
 }
 
 export async function updateMenuItem(pageId: string, fields: Partial<{

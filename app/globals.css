@@ -299,10 +299,10 @@ body {
 
 /* ── ANIMATIONS ── */
 @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
-.a1 { animation:fadeUp .35s ease .05s both; }
-.a2 { animation:fadeUp .35s ease .10s both; }
-.a3 { animation:fadeUp .35s ease .15s both; }
-.a4 { animation:fadeUp .35s ease .20s both; }
+.a1 { }
+.a2 { }
+.a3 { }
+.a4 { }
 
 /* ── MOBILE BOTTOM NAV ── */
 :root { --bn-h: 64px; }
@@ -352,16 +352,7 @@ body {
 .deleting  { animation: deleteSlide .25s ease forwards; }
 .badge-pending { animation: pulseBadge 2.2s ease infinite; }
 
-.stagger > * { animation: slideInUp .26s ease both; }
-.stagger > *:nth-child(1)  { animation-delay:.03s; }
-.stagger > *:nth-child(2)  { animation-delay:.07s; }
-.stagger > *:nth-child(3)  { animation-delay:.11s; }
-.stagger > *:nth-child(4)  { animation-delay:.15s; }
-.stagger > *:nth-child(5)  { animation-delay:.19s; }
-.stagger > *:nth-child(6)  { animation-delay:.23s; }
-.stagger > *:nth-child(7)  { animation-delay:.27s; }
-.stagger > *:nth-child(8)  { animation-delay:.31s; }
-.stagger > *:nth-child(n+9){ animation-delay:.35s; }
+.stagger > * { }
 
 /* ── QUICK ACTION GRID ── */
 .quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }

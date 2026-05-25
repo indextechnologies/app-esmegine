@@ -222,8 +222,15 @@ body {
 .toast-ic { width:20px; height:20px; background:var(--accent-grad); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; flex-shrink:0; }
 
 /* ── TABS ── */
-.tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px; }
-.tab-btn { padding:9px 16px; border:none; background:none; color:var(--text-2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .14s; }
+.tabs {
+  display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px;
+  position:sticky; top:0; z-index:30;
+  background:var(--bg-base);
+  overflow-x:auto; scrollbar-width:none; flex-wrap:nowrap;
+  padding-top:2px;
+}
+.tabs::-webkit-scrollbar { display:none; }
+.tab-btn { display:inline-flex; align-items:center; gap:5px; padding:9px 16px; border:none; background:none; color:var(--text-2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .14s; white-space:nowrap; flex-shrink:0; }
 .tab-btn:hover { color:var(--text-1); }
 .tab-btn.active { color:#a5b4fc; border-bottom-color:var(--accent-1); font-weight:600; }
 
@@ -459,8 +466,7 @@ body {
   .abtn { padding:7px 11px; font-size:11px; }
   .card { padding:14px; border-radius:12px; }
   .m-row { grid-template-columns:1fr; }
-  .tabs { overflow-x:auto; scrollbar-width:none; gap:0; flex-wrap:nowrap; }
-  .tabs::-webkit-scrollbar { display:none; }
+  .tabs { gap:0; }
   .tab-btn { white-space:nowrap; padding:9px 14px; font-size:12px; }
   .modal-ov.open { align-items:flex-end; }
   .modal {
@@ -493,22 +499,22 @@ body {
   .res-meta { font-size:10.5px; }
   .res-acts { gap:4px; }
 
-  /* Status badge compact on mobile */
-  .badge { font-size:9.5px; padding:2px 7px; }
+  /* Status badge on mobile */
+  .badge { font-size:11px; padding:3px 9px; }
 
   /* Menu items — prevent overflow */
   .menu-item-row { gap:8px; flex-wrap:nowrap; }
   .mitem-img { width:36px; height:36px; }
-  .mitem-name { font-size:12.5px; }
-  .mitem-cat  { font-size:10.5px; }
-  .mitem-price { font-size:12px; }
+  .mitem-name { font-size:14px; }
+  .mitem-cat  { font-size:12px; }
+  .mitem-price { font-size:14px; }
 
   /* Horarios — stack time inputs on small screens */
   .card { border-radius:12px; }
   input[type="time"].field-input { width:78px !important; padding:9px 6px; font-size:13px; }
 
   /* Tab label compact */
-  .tab-btn { padding:9px 12px; }
+  .tab-btn { padding:9px 12px; font-size:13px; }
 
   /* Quick grid equal height */
   .quick-card { justify-content:center; }

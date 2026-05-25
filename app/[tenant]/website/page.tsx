@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { CLIENTS } from '../../../lib/demo-data';
-import { PlusIcon, EditIcon, TrashIcon, ExternalIcon } from '../../../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon, ExternalIcon, UtensilsIcon, SunIcon, ClockIcon, MessageIcon, ImageIcon, TagIcon, FileTextIcon, CameraIcon } from '../../../components/Icons';
 
 type Category    = { id: string; nombre: string; icono: string; orden: number; activo: boolean; modoVista: boolean; };
 type MenuItem    = { id: string; nombre: string; descripcion: string; precio: number; activo: boolean; destacado: boolean; platoDelDia: boolean; categoriaId: string | null; imagenUrl: string | null; };
@@ -396,17 +396,17 @@ export default function WebsitePage() {
 
       <div className="tabs">
         {([
-          ['menu',        '🍽️ Menú'],
-          ['daily',       '☀️ Del Día'],
-          ['horarios',    '🕐 Horarios'],
-          ['testimonios', '💬 Reseñas'],
-          ['galeria',     '🖼️ Galería'],
-          ['promociones', '🎁 Promos'],
-          ['contacto',    '📋 Contacto'],
-          ['instagram',   '📸 Instagram'],
-        ] as [Tab, string][]).map(([t, label]) => (
+          { t: 'menu'        as Tab, label: 'Menú',      icon: <UtensilsIcon size={13} /> },
+          { t: 'daily'       as Tab, label: 'Del Día',   icon: <SunIcon      size={13} /> },
+          { t: 'horarios'    as Tab, label: 'Horarios',  icon: <ClockIcon    size={13} /> },
+          { t: 'testimonios' as Tab, label: 'Reseñas',   icon: <MessageIcon  size={13} /> },
+          { t: 'galeria'     as Tab, label: 'Galería',   icon: <ImageIcon    size={13} /> },
+          { t: 'promociones' as Tab, label: 'Promos',    icon: <TagIcon      size={13} /> },
+          { t: 'contacto'    as Tab, label: 'Contacto',  icon: <FileTextIcon size={13} /> },
+          { t: 'instagram'   as Tab, label: 'Instagram', icon: <CameraIcon   size={13} /> },
+        ]).map(({ t, label, icon }) => (
           <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {label}
+            {icon}{label}
           </button>
         ))}
       </div>
@@ -431,10 +431,6 @@ export default function WebsitePage() {
                     <div key={cat.id} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--bg-elevated)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', opacity: saving === 'cat-'+cat.id ? 0.6 : 1 }}>
                       <span style={{ fontSize:15 }}>{cat.icono}</span>
                       <span style={{ fontWeight:600, fontSize:12.5 }}>{cat.nombre}</span>
-                      <button title={cat.modoVista ? 'Modo Imagen' : 'Modo Icono'} onClick={() => patchCat(cat.id, { modoVista: !cat.modoVista })}
-                        style={{ background: cat.modoVista ? 'rgba(99,102,241,.15)' : 'var(--bg-hover)', border: '1px solid ' + (cat.modoVista ? 'rgba(99,102,241,.4)' : 'var(--border)'), borderRadius:6, padding:'2px 7px', fontSize:10.5, cursor:'pointer', color: cat.modoVista ? '#818cf8' : 'var(--text-3)', fontWeight:600 }}>
-                        {cat.modoVista ? '🖼️ Imagen' : '🔷 Icono'}
-                      </button>
                       <button className="abtn abtn-edit" style={{ padding:'2px 6px' }} onClick={() => { setEditCat(cat); setCatForm({ nombre:cat.nombre, icono:cat.icono }); setCatModal(true); }}><EditIcon size={11} /></button>
                       <button className="abtn abtn-canc" style={{ padding:'2px 6px' }} onClick={() => deleteCat(cat.id)}><TrashIcon size={11} /></button>
                     </div>
@@ -460,6 +456,10 @@ export default function WebsitePage() {
                       <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                         {imgMode && <span style={{ fontSize:10, background:'rgba(99,102,241,.12)', color:'#818cf8', padding:'1px 7px', borderRadius:20, fontWeight:700 }}>🖼️ Modo imagen</span>}
                         <span style={{ fontSize:11, color:'var(--text-3)' }}>{catItems.length} items</span>
+                        <button className="btn-primary" style={{ fontSize:11, padding:'3px 10px', minHeight:'unset', boxShadow:'none' }}
+                          onClick={() => { setEditItem(null); setItemForm({ nombre:'', descripcion:'', precio:'', categoriaId: cat.id, destacado:false, imagenUrl:'' }); setItemModal(true); }}>
+                          <PlusIcon size={10} /> Agregar
+                        </button>
                       </div>
                     </div>
                     {catItems.map(item => (

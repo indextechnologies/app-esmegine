@@ -1,122 +1,157 @@
 'use client';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
 import { CLIENTS, RESERVATIONS } from '../../../lib/demo-data';
-import { GlobeIcon, BarChartIcon, CRMIcon, ExternalIcon } from '../../../components/Icons';
 
 const TODAY = new Date().toISOString().slice(0, 10);
-const STATUS_LABEL: Record<string, string> = { confirmed: 'Confirmada', pending: 'Pendiente', cancelled: 'Cancelada' };
+const STATUS_LABEL: Record<string, string> = {
+  confirmed: 'Confirmada',
+  pending:   'Pendiente',
+  cancelled: 'Cancelada',
+};
 
 export default function TenantDashboard() {
   const { tenant } = useParams<{ tenant: string }>();
   const client = CLIENTS.find(c => c.slug === tenant);
-  const reservas = RESERVATIONS.filter(r => r.tenant === tenant);
+  const allReservas = RESERVATIONS.filter(r => r.tenant === tenant);
 
+  const [statuses, setStatuses] = useState<Record<string, string>>({});
   if (!client) return null;
 
-  const total     = reservas.length;
-  const todayRs   = reservas.filter(r => r.date === TODAY).length;
-  const confirmed = reservas.filter(r => r.status === 'confirmed').length;
-  const pending   = reservas.filter(r => r.status === 'pending').length;
-  const cancelled = reservas.filter(r => r.status === 'cancelled').length;
+  const getStatus = (id: string, fallback: string) => statuses[id] ?? fallback;
 
-  const recent = [...reservas]
+  const pending = allReservas.filter(r => getStatus(r.id, r.status) === 'pending').length;
+  const todayRs = allReservas.filter(r => r.date === TODAY).length;
+
+  const recent = [...allReservas]
     .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time))
-    .slice(0, 6);
+    .slice(0, 8);
 
-  const quickLinks = [
-    { href: `/${tenant}/website`,   icon: <GlobeIcon size={16} />,    label: 'Editar Website',  sub: 'Menú, horarios, galería' },
-    { href: `/${tenant}/analytics`, icon: <BarChartIcon size={16} />, label: 'Analytics',       sub: 'Visitas, SEO, fuentes'   },
-    { href: `/${tenant}/crm`,       icon: <CRMIcon size={16} />,      label: 'Mis Clientes',    sub: `${RESERVATIONS.filter(r => r.tenant === tenant).length} registros` },
-  ];
+  const dateStr = new Date().toLocaleDateString('es', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
 
   return (
     <>
-      <div className="pg-title a1">
-        {client.emoji} {client.name}
+      {/* Greeting */}
+      <div className="a1" style={{ marginBottom: 18 }}>
+        <div className="pg-title">{client.emoji} {client.name}</div>
+        <div className="pg-sub" style={{ textTransform: 'capitalize' }}>{dateStr}</div>
       </div>
-      <div className="pg-sub a1">
-        {new Date().toLocaleDateString('es', { weekday:'long', day:'numeric', month:'long' })} · {todayRs} reservas hoy
-        {client.website && (
-          <a href={client.website} target="_blank" rel="noopener" style={{ marginLeft: 12, color: 'var(--accent-1)', textDecoration: 'none', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <ExternalIcon size={11} /> Ver sitio web
-          </a>
+
+      {/* Hero stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }} className="a2">
+        <Link
+          href={`/${tenant}/reservas`}
+          className="today-hero"
+          style={{
+            background: pending > 0
+              ? 'linear-gradient(135deg,rgba(245,158,11,.14),rgba(245,158,11,.06))'
+              : 'linear-gradient(135deg,rgba(99,102,241,.14),rgba(139,92,246,.06))',
+            borderColor: pending > 0 ? 'rgba(245,158,11,.25)' : 'rgba(99,102,241,.22)',
+          }}
+        >
+          <div className="today-val" style={{ color: pending > 0 ? 'var(--yellow)' : '#a5b4fc' }}>
+            {pending}
+          </div>
+          <div>
+            <div className="today-label">{pending === 1 ? 'Pendiente' : 'Pendientes'}</div>
+            <div className="today-sub">
+              {pending > 0 ? 'Necesitan confirmación' : 'Todo confirmado ✓'}
+            </div>
+          </div>
+        </Link>
+
+        <Link
+          href={`/${tenant}/reservas`}
+          className="today-hero"
+          style={{
+            background: 'linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.05))',
+            borderColor: 'rgba(16,185,129,.22)',
+          }}
+        >
+          <div className="today-val" style={{ color: 'var(--green)' }}>{todayRs}</div>
+          <div>
+            <div className="today-label">Hoy</div>
+            <div className="today-sub">
+              {todayRs === 0 ? 'Sin reservas hoy' : `${todayRs} ${todayRs === 1 ? 'reserva' : 'reservas'}`}
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Quick actions */}
+      <div className="quick-grid a3">
+        <Link href={`/${tenant}/website`} className="quick-card">
+          <div className="quick-ic" style={{ background: 'rgba(99,102,241,.12)' }}>🌐</div>
+          <div className="quick-label">Editar sitio</div>
+          <div className="quick-sub">Menú, horarios, galería</div>
+        </Link>
+        <Link href={`/${tenant}/reservas`} className="quick-card">
+          <div className="quick-ic" style={{ background: 'rgba(16,185,129,.12)' }}>📅</div>
+          <div className="quick-label">Reservas</div>
+          <div className="quick-sub">Ver y gestionar</div>
+        </Link>
+        <Link href={`/${tenant}/crm`} className="quick-card">
+          <div className="quick-ic" style={{ background: 'rgba(245,158,11,.12)' }}>👥</div>
+          <div className="quick-label">Clientes</div>
+          <div className="quick-sub">Base de datos</div>
+        </Link>
+      </div>
+
+      {/* Recent reservations */}
+      <div className="card a4">
+        <div className="card-hd">
+          <div className="card-title">Últimas reservas</div>
+          <Link href={`/${tenant}/reservas`} className="card-link">Ver todas →</Link>
+        </div>
+
+        {recent.length === 0 ? (
+          <div className="empty">Sin reservas aún</div>
+        ) : (
+          <div className="stagger">
+            {recent.map(r => {
+              const status = getStatus(r.id, r.status);
+              return (
+                <div key={r.id} className="res-row">
+                  <div className="res-av">{r.client.slice(0, 2).toUpperCase()}</div>
+                  <div className="res-info">
+                    <div className="res-name">{r.client}</div>
+                    <div className="res-meta">{r.service} · {r.time}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <span className={`badge badge-${status}`}>{STATUS_LABEL[status]}</span>
+                    {status === 'pending' && (
+                      <button
+                        className="abtn abtn-conf"
+                        onClick={() => setStatuses(p => ({ ...p, [r.id]: 'confirmed' }))}
+                        title="Confirmar"
+                      >
+                        ✓
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
-      {/* Stats */}
-      <div className="stats-row">
-        {[
-          { l:'Total reservas', v:total,     c:'var(--accent-1)', ic:'📊', ch:'↑ 18% este mes',    cls:'ch-up'   },
-          { l:'Hoy',            v:todayRs,   c:'var(--green)',    ic:'📅', ch:'↑ 2 vs ayer',       cls:'ch-up'   },
-          { l:'Pendientes',     v:pending,   c:'var(--yellow)',   ic:'⏳', ch:'↑ 2 nuevas hoy',    cls:'ch-warn' },
-          { l:'Confirmadas',    v:confirmed, c:'var(--green)',    ic:'✓',  ch:`${Math.round(confirmed/Math.max(total,1)*100)}% tasa`, cls:'ch-up' },
-        ].map(s => (
-          <div key={s.l} className="stat-card">
-            <div className="stat-ic" style={{ background: s.c + '22', color: s.c }}>
-              <span style={{ fontSize: 16 }}>{s.ic}</span>
-            </div>
-            <div className="stat-val" style={{ color: s.c }}>{s.v}</div>
-            <div className="stat-lbl">{s.l}</div>
-            <div className={`stat-change ${s.cls}`}>{s.ch}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14 }}>
-
-        {/* Recent reservations */}
-        <div className="card a2">
-          <div className="card-hd">
-            <div className="card-title">Reservas recientes</div>
-            <Link href={`/${tenant}/reservas`} className="card-link">Ver todas →</Link>
-          </div>
-          {recent.length === 0 ? (
-            <div className="empty">Sin reservas aún</div>
-          ) : recent.map(r => (
-            <div key={r.id} className="act-item">
-              <div className={`act-dot ${r.status}`} />
-              <div className="act-body">
-                <div className="act-text"><strong>{r.client}</strong> · {r.service}</div>
-                <div className="act-time">{r.date} · {r.time} · <span style={{ color: r.status === 'confirmed' ? 'var(--green)' : r.status === 'pending' ? 'var(--yellow)' : 'var(--red)' }}>{STATUS_LABEL[r.status]}</span></div>
-              </div>
-            </div>
-          ))}
+      {/* Site link */}
+      {client.website && (
+        <div style={{ marginTop: 14, textAlign: 'center' }} className="a4">
+          <a
+            href={client.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 12, color: 'var(--text-3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+          >
+            <span style={{ opacity: .6 }}>🌐</span> Ver sitio web público
+          </a>
         </div>
-
-        {/* Quick links + info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card a3">
-            <div className="card-title" style={{ marginBottom: 12 }}>Acceso rápido</div>
-            {quickLinks.map(l => (
-              <Link key={l.href} href={l.href} className="sb-item" style={{ marginBottom: 4 }}>
-                <span className="sb-ic">{l.icon}</span>
-                <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-1)' }}>{l.label}</div>
-                  <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{l.sub}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="card a4">
-            <div className="card-title" style={{ marginBottom: 12 }}>Datos del negocio</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
-              {[
-                { label: '📧 Email',     val: client.email     },
-                { label: '📱 Instagram', val: client.instagram },
-                { label: '📍 Dirección', val: client.address   },
-                { label: '📋 Plan',      val: client.plan      },
-              ].map(row => (
-                <div key={row.label} style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ color: 'var(--text-3)', minWidth: 85 }}>{row.label}</span>
-                  <span style={{ color: 'var(--text-1)' }}>{row.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </>
   );
 }

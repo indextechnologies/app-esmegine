@@ -349,7 +349,7 @@ export default function WebsitePage() {
         )}
       </div>
 
-      <div className="tabs" style={{ flexWrap:'wrap' }}>
+      <div className="tabs">
         {([
           ['menu',        '🍽️ Menú'],
           ['daily',       '☀️ Del Día'],
@@ -554,7 +554,7 @@ export default function WebsitePage() {
               {testimonios.length === 0 ? (
                 <div className="empty">Sin reseñas aún.</div>
               ) : (
-                testimonios.map(t => (
+                <div className="stagger">{testimonios.map(t => (
                   <div key={t.id} className="card" style={{ marginBottom:10, opacity: saving === 'test-'+t.id ? 0.6 : 1 }}>
                     <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
                       <div style={{ flex:1 }}>
@@ -573,7 +573,7 @@ export default function WebsitePage() {
                       </div>
                     </div>
                   </div>
-                ))
+                ))}</div>
               )}
             </>
           )}
@@ -590,7 +590,7 @@ export default function WebsitePage() {
               {galeria.length === 0 ? (
                 <div className="empty">Sin imágenes en galería.</div>
               ) : (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:12 }}>
+                <div className="stagger" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:12 }}>
                   {galeria.map(g => (
                     <div key={g.id} style={{ border:'1px solid var(--border)', borderRadius:10, overflow:'hidden', opacity: saving === 'gal-'+g.id ? 0.6 : 1 }}>
                       <div style={{ height:120, background:'var(--bg-elevated)', position:'relative' }}>
@@ -629,7 +629,7 @@ export default function WebsitePage() {
               {promociones.length === 0 ? (
                 <div className="empty">Sin promociones creadas.</div>
               ) : (
-                promociones.map(p => (
+                <div className="stagger">{promociones.map(p => (
                   <div key={p.id} className="card" style={{ marginBottom:10, opacity: saving === 'promo-'+p.id ? 0.6 : 1 }}>
                     <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
                       {p.imagenUrl && <img src={p.imagenUrl} alt="" style={{ width:72, height:72, objectFit:'cover', borderRadius:8, flexShrink:0 }} />}
@@ -653,7 +653,7 @@ export default function WebsitePage() {
                       </div>
                     </div>
                   </div>
-                ))
+                ))}</div>
               )}
             </>
           )}

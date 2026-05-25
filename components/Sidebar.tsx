@@ -24,59 +24,72 @@ export default function Sidebar(props: Props) {
 
   if (props.mode === 'admin') {
     const links = [
-      { href: '/admin',          label: 'Dashboard',  icon: <DashIcon size={16} />, exact: true },
-      { href: '/admin/clientes', label: 'Clientes',   icon: <UsersIcon size={16} /> },
-      { href: '/admin/reservas', label: 'Reservas',   icon: <ResIcon size={16} /> },
-      { href: '/admin/config',   label: 'Configuración', icon: <SettingsIcon size={16} /> },
+      { href: '/admin',          label: 'Dashboard', icon: <DashIcon size={16} />,    bnIcon: <DashIcon size={18} />,    exact: true },
+      { href: '/admin/clientes', label: 'Clientes',  icon: <UsersIcon size={16} />,   bnIcon: <UsersIcon size={18} /> },
+      { href: '/admin/reservas', label: 'Reservas',  icon: <ResIcon size={16} />,     bnIcon: <ResIcon size={18} /> },
+      { href: '/admin/config',   label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },
     ];
 
     return (
-      <aside className="sidebar">
-        <div className="sb-logo">
-          <div className="sb-logo-row">
-            <div className="sb-gem">E</div>
-            <div>
-              <div className="sb-name">esmegine</div>
-              <div className="sb-sub">Index Technologies</div>
+      <>
+        <aside className="sidebar">
+          <div className="sb-logo">
+            <div className="sb-logo-row">
+              <div className="sb-gem">E</div>
+              <div>
+                <div className="sb-name">esmegine</div>
+                <div className="sb-sub">Index Technologies</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <nav className="sb-nav">
-          <div className="sb-sec">Panel principal</div>
+          <nav className="sb-nav">
+            <div className="sb-sec">Panel principal</div>
+            {links.map(l => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`sb-item ${(l.exact ? path === l.href : path.startsWith(l.href)) ? 'active' : ''}`}
+              >
+                <span className="sb-ic">{l.icon}</span>
+                {l.label}
+              </Link>
+            ))}
+
+            <div className="sb-sec" style={{ marginTop: 20 }}>Vista rápida</div>
+            <div style={{ padding: '0 10px', fontSize: 12, color: 'var(--text-3)' }}>Accedé a un cliente:</div>
+            {['bom-pain', 'la-pelu', 'divina-skybar'].map(slug => (
+              <Link key={slug} href={`/${slug}/dashboard`} className="sb-item" style={{ fontSize: 12 }}>
+                <span style={{ width: 16, textAlign: 'center' }}>›</span>
+                {slug}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="sb-foot">
+            <button className="sb-user" onClick={logout} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+              <div className="sb-av">IT</div>
+              <div>
+                <div className="sb-uname">Index Technologies</div>
+                <div className="sb-urole">Super Admin</div>
+              </div>
+            </button>
+          </div>
+        </aside>
+
+        <nav className="bottom-nav">
           {links.map(l => (
             <Link
               key={l.href}
               href={l.href}
-              className={`sb-item ${(l.exact ? path === l.href : path.startsWith(l.href)) ? 'active' : ''}`}
+              className={`bn-item ${(l.exact ? path === l.href : path.startsWith(l.href)) ? 'active' : ''}`}
             >
-              <span className="sb-ic">{l.icon}</span>
-              {l.label}
-            </Link>
-          ))}
-
-          <div className="sb-sec" style={{ marginTop: 20 }}>Vista rápida</div>
-          <div style={{ padding: '0 10px', fontSize: 12, color: 'var(--text-3)' }}>
-            Accedé a un cliente:
-          </div>
-          {['bom-pain','la-pelu','divina-skybar'].map(slug => (
-            <Link key={slug} href={`/${slug}/dashboard`} className="sb-item" style={{ fontSize: 12 }}>
-              <span style={{ width: 16, textAlign: 'center' }}>›</span>
-              {slug}
+              <span className="bn-ic">{l.bnIcon}</span>
+              <span className="bn-label">{l.label}</span>
             </Link>
           ))}
         </nav>
-
-        <div className="sb-foot">
-          <button className="sb-user" onClick={logout} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-            <div className="sb-av">IT</div>
-            <div>
-              <div className="sb-uname">Index Technologies</div>
-              <div className="sb-urole">Super Admin</div>
-            </div>
-          </button>
-        </div>
-      </aside>
+      </>
     );
   }
 
@@ -84,58 +97,75 @@ export default function Sidebar(props: Props) {
   const base = `/${slug}`;
 
   const links = [
-    { href: `${base}/dashboard`,  label: 'Dashboard',  icon: <DashIcon size={16} /> },
-    { href: `${base}/reservas`,   label: 'Reservas',   icon: <ResIcon size={16} /> },
-    { href: `${base}/website`,    label: 'Website',    icon: <GlobeIcon size={16} /> },
-    { href: `${base}/crm`,        label: 'Clientes',   icon: <CRMIcon size={16} /> },
-    { href: `${base}/analytics`,  label: 'Analytics',  icon: <BarChartIcon size={16} /> },
-    { href: `${base}/config`,     label: 'Configuración', icon: <SettingsIcon size={16} /> },
+    { href: `${base}/dashboard`, label: 'Inicio',    icon: <DashIcon size={16} />,     bnIcon: <DashIcon size={18} /> },
+    { href: `${base}/reservas`,  label: 'Reservas',  icon: <ResIcon size={16} />,      bnIcon: <ResIcon size={18} /> },
+    { href: `${base}/website`,   label: 'Sitio web', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
+    { href: `${base}/crm`,       label: 'Clientes',  icon: <CRMIcon size={16} />,      bnIcon: <CRMIcon size={18} /> },
+    { href: `${base}/analytics`, label: 'Stats',     icon: <BarChartIcon size={16} />, bnIcon: <BarChartIcon size={18} /> },
+    { href: `${base}/config`,    label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },
   ];
 
+  const bnLinks = links.slice(0, 5);
+
   return (
-    <aside className="sidebar">
-      <div className="sb-logo">
-        <div className="sb-logo-row">
-          <div className="sb-gem">E</div>
-          <div>
-            <div className="sb-name">esmegine</div>
-            <div className="sb-sub">by Index Technologies</div>
+    <>
+      <aside className="sidebar">
+        <div className="sb-logo">
+          <div className="sb-logo-row">
+            <div className="sb-gem">E</div>
+            <div>
+              <div className="sb-name">esmegine</div>
+              <div className="sb-sub">by Index Technologies</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="sb-client-badge">
-        <div className="sb-client-name">{name}</div>
-        <div className="sb-client-type">{industry}</div>
-      </div>
+        <div className="sb-client-badge">
+          <div className="sb-client-name">{name}</div>
+          <div className="sb-client-type">{industry}</div>
+        </div>
 
-      <nav className="sb-nav">
-        <div className="sb-sec">Módulos</div>
-        {links.map(l => (
+        <nav className="sb-nav">
+          <div className="sb-sec">Módulos</div>
+          {links.map(l => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`sb-item ${path === l.href ? 'active' : ''}`}
+            >
+              <span className="sb-ic">{l.icon}</span>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="sb-foot">
+          <Link href="/admin" className="sb-item" style={{ fontSize: 12, marginBottom: 8 }}>
+            <span className="sb-ic"><ArrowLeft size={14} /></span>
+            Panel Admin
+          </Link>
+          <button className="sb-user" onClick={logout} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+            <div className="sb-av">{name.slice(0, 2).toUpperCase()}</div>
+            <div>
+              <div className="sb-uname">{name}</div>
+              <div className="sb-urole">Admin</div>
+            </div>
+          </button>
+        </div>
+      </aside>
+
+      <nav className="bottom-nav">
+        {bnLinks.map(l => (
           <Link
             key={l.href}
             href={l.href}
-            className={`sb-item ${path === l.href ? 'active' : ''}`}
+            className={`bn-item ${path === l.href ? 'active' : ''}`}
           >
-            <span className="sb-ic">{l.icon}</span>
-            {l.label}
+            <span className="bn-ic">{l.bnIcon}</span>
+            <span className="bn-label">{l.label}</span>
           </Link>
         ))}
       </nav>
-
-      <div className="sb-foot">
-        <Link href="/admin" className="sb-item" style={{ fontSize: 12, marginBottom: 8 }}>
-          <span className="sb-ic"><ArrowLeft size={14} /></span>
-          Panel Admin
-        </Link>
-        <button className="sb-user" onClick={logout} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-          <div className="sb-av">{name.slice(0, 2).toUpperCase()}</div>
-          <div>
-            <div className="sb-uname">{name}</div>
-            <div className="sb-urole">Admin</div>
-          </div>
-        </button>
-      </div>
-    </aside>
+    </>
   );
 }

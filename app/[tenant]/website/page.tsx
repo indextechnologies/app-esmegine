@@ -711,7 +711,7 @@ export default function WebsitePage() {
                 <div style={{ fontSize:13, color:'var(--text-2)' }}>
                   {igLinks.length} posts · {igLinks.filter(l => l.activo).length} activos
                 </div>
-                <button className="btn-primary" onClick={() => { setIgForm({ titulo:'', urlPost:'' }); setIgModal(true); }}>
+                <button className="btn-primary" onClick={() => { setIgForm({ titulo:'', urlPost:'', tipo:'Post' }); setIgModal(true); }}>
                   <PlusIcon size={13} /> Agregar post
                 </button>
               </div>

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getReservations, createReservation } from '../../../../lib/notion';
+import { corsHeaders, options as corsOptions } from '../../../../lib/cors';
+
+export async function OPTIONS(req: NextRequest) {
+  return corsOptions(req);
+}
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant } = await params;
   const reservas = await getReservations(tenant);
-  return NextResponse.json(reservas);
+  return NextResponse.json(reservas, { headers: corsHeaders(req.headers.get('origin')) });
 }
 
 export async function POST(
@@ -17,5 +22,5 @@ export async function POST(
   const { tenant } = await params;
   const body = await req.json();
   const result = await createReservation(tenant, body);
-  return NextResponse.json(result);
+  return NextResponse.json(result, { headers: corsHeaders(req.headers.get('origin')) });
 }

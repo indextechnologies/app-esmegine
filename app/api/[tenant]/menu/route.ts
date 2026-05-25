@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMenuItems, getCategories, createMenuItem } from '../../../../lib/notion';
+import { corsHeaders, options as corsOptions } from '../../../../lib/cors';
+
+export async function OPTIONS(req: NextRequest) {
+  return corsOptions(req);
+}
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant } = await params;
@@ -10,7 +15,10 @@ export async function GET(
     getMenuItems(tenant),
     getCategories(tenant),
   ]);
-  return NextResponse.json({ items, categories });
+  return NextResponse.json(
+    { items, categories },
+    { headers: corsHeaders(req.headers.get('origin')) },
+  );
 }
 
 export async function POST(
@@ -20,5 +28,5 @@ export async function POST(
   const { tenant } = await params;
   const body = await req.json();
   const item = await createMenuItem(tenant, body);
-  return NextResponse.json(item);
+  return NextResponse.json(item, { headers: corsHeaders(req.headers.get('origin')) });
 }

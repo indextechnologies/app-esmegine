@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 const PIN_LEN = 5;
 
 const USERS: Record<string, { pin: string; dest: string; display: string }> = {
-  index:   { pin: '202600', dest: '/admin',              display: 'Index' },
-  bompain: { pin: '202601', dest: '/bom-pain/dashboard', display: 'Bom Pain' },
+  index:   { pin: '20260', dest: '/admin',              display: 'Index' },
+  bompain: { pin: '20261', dest: '/bom-pain/dashboard', display: 'Bom Pain' },
 };
 
 export default function LoginPage() {

@@ -333,7 +333,6 @@ export default function WebsitePage() {
     finally { setSaving(null); }
   }
 
-  const catMap = Object.fromEntries(categories.map(c => [c.id, c]));
   const daily  = items.filter(i => i.platoDelDia);
   const activeCount = items.filter(i => i.activo).length;
 

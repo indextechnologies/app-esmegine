@@ -1,11 +1,21 @@
 'use client';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import Sidebar from '../../components/Sidebar';
-import { BellIcon, SearchIcon } from '../../components/Icons';
+import { BellIcon } from '../../components/Icons';
 import { CLIENTS } from '../../lib/demo-data';
+
+const PAGE_TITLES: Record<string, string> = {
+  dashboard:  'Inicio',
+  reservas:   'Reservas',
+  website:    'Mi Sitio Web',
+  crm:        'Clientes',
+  analytics:  'Estadísticas',
+  config:     'Configuración',
+};
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const { tenant } = useParams<{ tenant: string }>();
+  const path = usePathname();
   const client = CLIENTS.find(c => c.slug === tenant);
 
   if (!client) {
@@ -15,6 +25,9 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
       </div>
     );
   }
+
+  const segment = path.split('/').pop() ?? '';
+  const pageTitle = PAGE_TITLES[segment] ?? client.name;
 
   return (
     <div className="app-shell">
@@ -27,10 +40,11 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
       />
       <div className="main-area">
         <header className="top-bar">
-          <span className="bar-title">{client.name}</span>
-          <div className="search-bar">
-            <SearchIcon size={13} />
-            <input placeholder="Buscar..." />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="bar-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {pageTitle}
+            </div>
+            <div className="bar-sub">{client.name}</div>
           </div>
           <div className="bar-actions">
             <div className="icon-btn">

@@ -11,11 +11,11 @@ type Reservation = {
 
 const STATUS_LABEL: Record<string, string> = {
   Confirmada: 'Confirmada', Pendiente: 'Pendiente',
-  Cancelada: 'Cancelada', Completada: 'Completada', 'No Show': 'No Show',
+  Cancelada:  'Cancelada',  Completada: 'Completada', 'No Show': 'No Show',
 };
 const STATUS_BADGE: Record<string, string> = {
   Confirmada: 'confirmed', Pendiente: 'pending',
-  Cancelada: 'cancelled', Completada: 'confirmed', 'No Show': 'inactive',
+  Cancelada:  'cancelled', Completada: 'confirmed', 'No Show': 'inactive',
 };
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -25,19 +25,27 @@ function fmtDate(d: string) {
   return `${+day} ${MONTHS[+m - 1]}`;
 }
 
+const CHIPS = [
+  { val: 'all',        label: 'Todas'       },
+  { val: 'Pendiente',  label: 'Pendientes'  },
+  { val: 'Confirmada', label: 'Confirmadas' },
+  { val: 'Completada', label: 'Completadas' },
+  { val: 'Cancelada',  label: 'Canceladas'  },
+];
+
 export default function ReservasPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const client = CLIENTS.find(c => c.slug === tenant);
 
-  const [data, setData]     = useState<Reservation[]>([]);
+  const [data, setData]       = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fStatus, setFS]    = useState('all');
-  const [q, setQ]           = useState('');
-  const [view, setView]     = useState<'list' | 'cal'>('list');
-  const [modal, setModal]   = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast]   = useState('');
-  const [form, setForm]     = useState({
+  const [fStatus, setFS]      = useState('all');
+  const [q, setQ]             = useState('');
+  const [view, setView]       = useState<'list' | 'cal'>('list');
+  const [modal, setModal]     = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [toast, setToast]     = useState('');
+  const [form, setForm]       = useState({
     nombre: '', email: '', telefono: '', fecha: '', hora: '09:00', notas: '',
   });
 
@@ -84,15 +92,14 @@ export default function ReservasPage() {
         body: JSON.stringify(form),
       });
       const created = await res.json();
-      const nr: Reservation = {
+      setData(prev => [{
         id: created.id, resumen: `Reserva — ${form.nombre}`,
         nombreCliente: form.nombre, email: form.email, telefono: form.telefono,
         estado: 'Pendiente', fecha: form.fecha, hora: form.hora, notas: form.notas,
-      };
-      setData(prev => [nr, ...prev]);
+      }, ...prev]);
       setModal(false);
       setForm({ nombre: '', email: '', telefono: '', fecha: '', hora: '09:00', notas: '' });
-      showToast('Reserva creada');
+      showToast('Reserva creada ✓');
     } catch {
       showToast('Error al crear reserva');
     } finally {
@@ -107,119 +114,132 @@ export default function ReservasPage() {
 
   const byDate = new Map<string, Reservation[]>();
   filtered.forEach(r => { const l = byDate.get(r.fecha) ?? []; l.push(r); byDate.set(r.fecha, l); });
-  const calDays = Array.from(byDate.entries()).sort(([a],[b]) => a.localeCompare(b));
+  const calDays = Array.from(byDate.entries()).sort(([a],[b]) => b.localeCompare(a));
 
-  const total     = data.length;
-  const confirmed = data.filter(r => r.estado === 'Confirmada').length;
-  const pending   = data.filter(r => r.estado === 'Pendiente').length;
-  const cancelled = data.filter(r => r.estado === 'Cancelada').length;
+  const pending = data.filter(r => r.estado === 'Pendiente').length;
 
   return (
     <>
-      <div className="pg-title">Reservas</div>
-      <div className="pg-sub">{client?.name} · {total} registros totales</div>
-
-      <div className="stats-row">
-        {[
-          { l: 'Total',       v: total,     c: 'var(--accent-1)' },
-          { l: 'Confirmadas', v: confirmed, c: 'var(--green)'    },
-          { l: 'Pendientes',  v: pending,   c: 'var(--yellow)'   },
-          { l: 'Canceladas',  v: cancelled, c: 'var(--red)'      },
-        ].map(s => (
-          <div key={s.l} className="stat-card">
-            <div className="stat-val" style={{ color: s.c }}>{s.v}</div>
-            <div className="stat-lbl">{s.l}</div>
+      {/* Header */}
+      <div className="res-page-hd a1">
+        <div>
+          <div className="pg-title">Reservas</div>
+          <div className="pg-sub" style={{ marginBottom: 0 }}>
+            {client?.name} · {data.length} total
+            {pending > 0 && (
+              <span className="pending-pill">{pending} pendiente{pending !== 1 ? 's' : ''}</span>
+            )}
           </div>
-        ))}
-      </div>
-
-      <div className="filters">
-        <input
-          className="field-input" style={{ width: 220 }}
-          placeholder="Buscar cliente..."
-          value={q} onChange={e => setQ(e.target.value)}
-        />
-        <select className="f-select" value={fStatus} onChange={e => setFS(e.target.value)}>
-          <option value="all">Todos los estados</option>
-          <option value="Confirmada">Confirmadas</option>
-          <option value="Pendiente">Pendientes</option>
-          <option value="Cancelada">Canceladas</option>
-          <option value="Completada">Completadas</option>
-        </select>
-        <div style={{ display: 'flex', gap: 2, marginLeft: 4, background: 'var(--bg-elevated)', borderRadius: 8, padding: 2 }}>
-          {(['list','cal'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{
-              padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: view === v ? 'var(--bg-hover)' : 'transparent',
-              color: view === v ? 'var(--text-1)' : 'var(--text-2)',
-              fontSize: 12, fontWeight: 600,
-            }}>
-              {v === 'list' ? 'Lista' : <><CalIcon size={12} /> Calendario</>}
-            </button>
-          ))}
         </div>
-        <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={() => setModal(true)}>
-          <PlusIcon size={13} /> Nueva reserva
+        <button className="btn-primary" onClick={() => setModal(true)} style={{ flexShrink: 0 }}>
+          <PlusIcon size={13} /> Nueva
         </button>
       </div>
 
+      {/* View toggle */}
+      <div className="view-toggle a2">
+        {(['list', 'cal'] as const).map(v => (
+          <button
+            key={v}
+            className={`vt-btn ${view === v ? 'active' : ''}`}
+            onClick={() => setView(v)}
+          >
+            {v === 'list' ? '☰ Lista' : <><CalIcon size={12} /> Calendario</>}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="a2" style={{ marginBottom: 10 }}>
+        <input
+          className="field-input"
+          placeholder="Buscar por nombre..."
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      {/* Status chips */}
+      <div className="chip-row a2">
+        {CHIPS.map(c => (
+          <button
+            key={c.val}
+            className={`chip ${fStatus === c.val ? 'chip-active' : ''}`}
+            onClick={() => setFS(c.val)}
+          >
+            {c.label}
+            {c.val === 'Pendiente' && pending > 0 && (
+              <span className="chip-count">{pending}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
       {loading ? (
         <div className="empty" style={{ padding: 48 }}>Cargando desde Notion…</div>
       ) : view === 'list' ? (
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Cliente</th><th>Fecha & Hora</th><th>Contacto</th><th>Estado</th><th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={5} className="empty">Sin resultados</td></tr>
-              ) : filtered.map(r => (
-                <tr key={r.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{r.nombreCliente}</div>
-                    {r.notas && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.notas}</div>}
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{fmtDate(r.fecha)}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.hora}</div>
-                  </td>
-                  <td style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                    <div>{r.email}</div><div>{r.telefono}</div>
-                  </td>
-                  <td><span className={`badge badge-${STATUS_BADGE[r.estado] ?? 'pending'}`}>{STATUS_LABEL[r.estado] ?? r.estado}</span></td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {r.estado === 'Pendiente'  && <button className="abtn abtn-conf" onClick={() => changeStatus(r.id, 'Confirmada')}>Confirmar</button>}
-                      {r.estado !== 'Cancelada'  && r.estado !== 'Completada' && <button className="abtn abtn-canc" onClick={() => changeStatus(r.id, 'Cancelada')}>Cancelar</button>}
-                      {r.estado === 'Confirmada' && <button className="abtn abtn-edit" onClick={() => changeStatus(r.id, 'Completada')}>✓ Completar</button>}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {filtered.length === 0 ? (
+            <div className="empty">Sin resultados</div>
+          ) : (
+            <div className="stagger" style={{ padding: '0 16px' }}>
+              {filtered.map(r => (
+                <div key={r.id} className="res-row">
+                  <div className="res-av">{r.nombreCliente.slice(0, 2).toUpperCase()}</div>
+                  <div className="res-info">
+                    <div className="res-name">{r.nombreCliente}</div>
+                    <div className="res-meta">
+                      {fmtDate(r.fecha)} · {r.hora}
+                      {r.notas ? ` · ${r.notas}` : ''}
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="res-acts">
+                    <span className={`badge badge-${STATUS_BADGE[r.estado] ?? 'pending'}`}>
+                      {STATUS_LABEL[r.estado] ?? r.estado}
+                    </span>
+                    {r.estado === 'Pendiente' && (
+                      <button className="abtn abtn-conf" onClick={() => changeStatus(r.id, 'Confirmada')} title="Confirmar">✓</button>
+                    )}
+                    {r.estado !== 'Cancelada' && r.estado !== 'Completada' && (
+                      <button className="abtn abtn-canc" onClick={() => changeStatus(r.id, 'Cancelada')} title="Cancelar">✕</button>
+                    )}
+                    {r.estado === 'Confirmada' && (
+                      <button className="abtn abtn-edit" onClick={() => changeStatus(r.id, 'Completada')} title="Completar" style={{ fontSize: 10 }}>✓✓</button>
+                    )}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {calDays.length === 0 ? <div className="empty">Sin reservas</div> : calDays.map(([date, slots]) => (
+        <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {calDays.length === 0 ? (
+            <div className="empty">Sin reservas</div>
+          ) : calDays.map(([date, slots]) => (
             <div key={date} className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <CalIcon size={13} />
                 <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 14 }}>{fmtDate(date)}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-2)' }}>{slots.length} reserva{slots.length !== 1 ? 's' : ''}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-2)' }}>
+                  {slots.length} reserva{slots.length !== 1 ? 's' : ''}
+                </span>
               </div>
               {slots.map(r => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13, color: 'var(--accent-1)', minWidth: 40 }}>{r.hora}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{r.nombreCliente}</div>
-                    {r.notas && <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{r.notas}</div>}
+                <div key={r.id} className="res-row" style={{ padding: '10px 16px' }}>
+                  <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 14, color: 'var(--accent-1)', minWidth: 40, flexShrink: 0 }}>
+                    {r.hora}
+                  </span>
+                  <div className="res-info">
+                    <div className="res-name">{r.nombreCliente}</div>
+                    {r.notas && <div className="res-meta">{r.notas}</div>}
                   </div>
-                  <span className={`badge badge-${STATUS_BADGE[r.estado] ?? 'pending'}`}>{STATUS_LABEL[r.estado] ?? r.estado}</span>
-                  <div style={{ display: 'flex', gap: 4 }}>
+                  <div className="res-acts">
+                    <span className={`badge badge-${STATUS_BADGE[r.estado] ?? 'pending'}`}>
+                      {STATUS_LABEL[r.estado] ?? r.estado}
+                    </span>
                     {r.estado === 'Pendiente'  && <button className="abtn abtn-conf" onClick={() => changeStatus(r.id, 'Confirmada')}>✓</button>}
                     {r.estado !== 'Cancelada'  && r.estado !== 'Completada' && <button className="abtn abtn-canc" onClick={() => changeStatus(r.id, 'Cancelada')}>✕</button>}
                   </div>
@@ -239,42 +259,36 @@ export default function ReservasPage() {
           </div>
           <div className="m-row">
             <div className="field-group">
-              <label className="field-label">Nombre</label>
+              <label className="field-label">Nombre *</label>
               <input className="field-input" placeholder="Nombre del cliente" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} />
             </div>
             <div className="field-group">
-              <label className="field-label">Email</label>
-              <input className="field-input" type="email" placeholder="email@..." value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+              <label className="field-label">Teléfono</label>
+              <input className="field-input" placeholder="09XX XXX XXX" inputMode="tel" value={form.telefono} onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))} />
             </div>
           </div>
           <div className="m-row">
             <div className="field-group">
-              <label className="field-label">Teléfono</label>
-              <input className="field-input" placeholder="09XX XXX XXX" value={form.telefono} onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))} />
-            </div>
-            <div className="field-group">
-              <label className="field-label">Fecha</label>
+              <label className="field-label">Fecha *</label>
               <input className="field-input" type="date" value={form.fecha} onChange={e => setForm(p => ({ ...p, fecha: e.target.value }))} />
             </div>
-          </div>
-          <div className="m-row">
             <div className="field-group">
               <label className="field-label">Hora</label>
-              <select className="field-input" value={form.hora} onChange={e => setForm(p => ({ ...p, hora: e.target.value }))}>
-                {['07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30',
-                  '12:00','12:30','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00',
-                  '20:30','21:00','21:30','22:00'].map(t => <option key={t}>{t}</option>)}
-              </select>
+              <input className="field-input" type="time" value={form.hora} onChange={e => setForm(p => ({ ...p, hora: e.target.value }))} />
             </div>
-            <div className="field-group">
-              <label className="field-label">Notas</label>
-              <input className="field-input" placeholder="Notas adicionales..." value={form.notas} onChange={e => setForm(p => ({ ...p, notas: e.target.value }))} />
-            </div>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Email</label>
+            <input className="field-input" type="email" placeholder="email@..." inputMode="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Notas</label>
+            <textarea className="field-input" placeholder="Motivo, ocasión especial..." value={form.notas} onChange={e => setForm(p => ({ ...p, notas: e.target.value }))} rows={2} style={{ resize: 'none' }} />
           </div>
           <div className="modal-foot">
             <button className="btn-sec" onClick={() => setModal(false)}>Cancelar</button>
-            <button className="btn-primary" onClick={addReservation} disabled={saving}>
-              {saving ? 'Creando…' : 'Crear Reserva'}
+            <button className="btn-primary" onClick={addReservation} disabled={saving || !form.nombre || !form.fecha}>
+              {saving ? 'Guardando…' : '✓ Guardar'}
             </button>
           </div>
         </div>

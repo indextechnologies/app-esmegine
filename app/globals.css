@@ -123,7 +123,8 @@ body {
 .sb-urole { font-size:10.5px; color:var(--text-3); }
 
 /* ── TOP BAR ── */
-.bar-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; flex:1; }
+.bar-title { font-family:'Syne',sans-serif; font-size:15px; font-weight:700; }
+.bar-sub   { font-size:10.5px; color:var(--text-3); margin-top:1px; display:none; }
 .search-bar { display:flex; align-items:center; background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:0 10px; gap:7px; width:210px; transition:border-color .18s; }
 .search-bar:focus-within { border-color:var(--accent-1); }
 .search-bar input { background:none; border:none; outline:none; color:var(--text-1); font-family:'DM Sans',sans-serif; font-size:13px; padding:7px 0; width:100%; }
@@ -386,6 +387,41 @@ body {
 .res-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .res-meta { font-size:11px; color:var(--text-2); margin-top:2px; }
 
+/* ── FILTER CHIPS ── */
+.chip-row { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:4px; margin-bottom:14px; }
+.chip-row::-webkit-scrollbar { display:none; }
+.chip {
+  padding:7px 14px; border-radius:20px; border:1px solid var(--border);
+  background:var(--bg-elevated); color:var(--text-2);
+  font-family:'DM Sans',sans-serif; font-size:12.5px; font-weight:600;
+  cursor:pointer; white-space:nowrap; transition:all .16s cubic-bezier(.34,1.56,.64,1);
+  display:inline-flex; align-items:center; gap:5px; flex-shrink:0;
+}
+.chip:hover { border-color:var(--border-acc); color:var(--text-1); transform:translateY(-1px); }
+.chip-active { background:var(--accent-1); border-color:var(--accent-1); color:white; }
+.chip-count {
+  background:rgba(255,255,255,.25); color:inherit; font-size:9.5px; font-weight:700;
+  padding:1px 5px; border-radius:10px; line-height:1.4;
+}
+
+/* ── RESERVAS PAGE ── */
+.res-page-hd { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.pending-pill { margin-left:8px; background:rgba(245,158,11,.15); color:var(--yellow); font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.res-acts { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+
+.view-toggle {
+  display:inline-flex; gap:2px; background:var(--bg-elevated);
+  border-radius:10px; padding:3px; margin-bottom:12px;
+}
+.vt-btn {
+  padding:6px 14px; border-radius:7px; border:none; cursor:pointer;
+  background:transparent; color:var(--text-2); font-family:'DM Sans',sans-serif;
+  font-size:12.5px; font-weight:600; transition:all .14s;
+  display:flex; align-items:center; gap:5px;
+}
+.vt-btn.active { background:var(--bg-hover); color:var(--text-1); }
+.vt-btn:hover:not(.active) { color:var(--text-1); }
+
 /* ── TODAY HERO CARD ── */
 .today-hero {
   background:linear-gradient(135deg, rgba(99,102,241,.14), rgba(139,92,246,.06));
@@ -440,4 +476,43 @@ body {
   .today-hero { padding:16px; gap:12px; }
   .today-val  { font-size:40px; }
   .today-label { font-size:14px; }
+
+  /* Top bar mobile */
+  .icon-btn  { width:30px; height:30px; }
+  .av-sm     { width:30px; height:30px; font-size:10px; border-radius:8px; }
+  .bar-title { font-size:14px; font-weight:800; }
+  .bar-sub   { display:block; }
+  .top-bar   { height:52px; }
+
+  /* Reservas page */
+  .res-page-hd { margin-bottom:12px; }
+  .res-page-hd .pg-title { font-size:19px; }
+  .res-row { gap:9px; }
+  .res-av  { width:34px; height:34px; font-size:11px; border-radius:8px; }
+  .res-name { font-size:12.5px; }
+  .res-meta { font-size:10.5px; }
+  .res-acts { gap:4px; }
+
+  /* Status badge compact on mobile */
+  .badge { font-size:9.5px; padding:2px 7px; }
+
+  /* Menu items — prevent overflow */
+  .menu-item-row { gap:8px; flex-wrap:nowrap; }
+  .mitem-img { width:36px; height:36px; }
+  .mitem-name { font-size:12.5px; }
+  .mitem-cat  { font-size:10.5px; }
+  .mitem-price { font-size:12px; }
+
+  /* Horarios — stack time inputs on small screens */
+  .card { border-radius:12px; }
+  input[type="time"].field-input { width:78px !important; padding:9px 6px; font-size:13px; }
+
+  /* Tab label compact */
+  .tab-btn { padding:9px 12px; }
+
+  /* Quick grid equal height */
+  .quick-card { justify-content:center; }
+
+  /* Toast above bottom nav */
+  .toast { bottom:calc(var(--bn-h) + 12px + env(safe-area-inset-bottom, 0px)); right:14px; left:14px; text-align:center; justify-content:center; }
 }

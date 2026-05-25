@@ -9,6 +9,7 @@ const DB = {
   galeria:     'ed962b28-575f-4fc3-b69d-d1640b43d97a',
   testimonios: 'ac829574-7508-4a95-9308-5281ef11e95b',
   promociones: '6558132f-a2cd-4b74-b4c0-695ff0899ac6',
+  instagram:   'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
 };
 
 // slug → Notion page ID for tenant record
@@ -548,5 +549,65 @@ export async function updatePromocion(pageId: string, fields: Partial<{
 }
 
 export async function deletePromocion(pageId: string) {
+  return archivePage(pageId);
+}
+
+// ─── Instagram Links ──────────────────────────────────────────────────────────
+
+export type NotionInstagramLink = {
+  id: string;
+  titulo: string;
+  urlPost: string;
+  activo: boolean;
+  orden: number;
+  tipo: string;
+};
+
+export async function getInstagramLinks(tenant: string): Promise<NotionInstagramLink[]> {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.instagram,
+    { property: 'Tenant', relation: { contains: tenantId } },
+    [{ property: 'Orden', direction: 'ascending' }],
+  );
+  return rows.map((p: any) => ({
+    id:      p.id,
+    titulo:  p.properties['Descripción']?.title?.[0]?.plain_text ?? '',
+    urlPost: p.properties['Enlace']?.url ?? '',
+    activo:  p.properties['Activo']?.checkbox ?? false,
+    orden:   p.properties['Orden']?.number ?? 0,
+    tipo:    p.properties['Tipo']?.select?.name ?? 'Post',
+  }));
+}
+
+export async function createInstagramLink(tenant: string, data: {
+  titulo: string; urlPost: string; orden?: number; tipo?: string;
+}) {
+  const tenantId = TENANT_PAGE[tenant];
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.instagram, {
+    'Descripción': { title: [{ text: { content: data.titulo } }] },
+    'Enlace':      { url: data.urlPost || null },
+    'Activo':      { checkbox: true },
+    'Orden':       { number: data.orden ?? 0 },
+    'Tipo':        { select: { name: data.tipo ?? 'Post' } },
+    'Tenant':      { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateInstagramLink(pageId: string, fields: Partial<{
+  titulo: string; urlPost: string; activo: boolean; orden: number; tipo: string;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.titulo  !== undefined) props['Descripción'] = { title: [{ text: { content: fields.titulo } }] };
+  if (fields.urlPost !== undefined) props['Enlace']      = { url: fields.urlPost || null };
+  if (fields.activo  !== undefined) props['Activo']      = { checkbox: fields.activo };
+  if (fields.orden   !== undefined) props['Orden']       = { number: fields.orden };
+  if (fields.tipo    !== undefined) props['Tipo']        = { select: { name: fields.tipo } };
+  return patchPage(pageId, props);
+}
+
+export async function deleteInstagramLink(pageId: string) {
   return archivePage(pageId);
 }

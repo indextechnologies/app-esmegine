@@ -11,7 +11,8 @@ type GaleriaItem = { id: string; titulo: string; urlImagen: string; altText: str
 type Testimonio  = { id: string; nombre: string; testimonio: string; calificacion: number; contexto: string; plataforma: string; activo: boolean; };
 type Promocion   = { id: string; titulo: string; descripcion: string; descuento: number; tipo: string; imagenUrl: string; fechaInicio: string; fechaFin: string; activo: boolean; };
 
-type Tab = 'menu' | 'daily' | 'horarios' | 'testimonios' | 'galeria' | 'promociones' | 'contacto';
+type Tab = 'menu' | 'daily' | 'horarios' | 'testimonios' | 'galeria' | 'promociones' | 'contacto' | 'instagram';
+type IgLink = { id: string; titulo: string; urlPost: string; activo: boolean; orden: number; tipo: string; };
 
 export default function WebsitePage() {
   const { tenant } = useParams<{ tenant: string }>();
@@ -24,6 +25,7 @@ export default function WebsitePage() {
   const [galeria, setGaleria]     = useState<GaleriaItem[]>([]);
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [promociones, setPromociones] = useState<Promocion[]>([]);
+  const [igLinks, setIgLinks]     = useState<IgLink[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState<string | null>(null);
   const [toast, setToast]         = useState('');
@@ -47,6 +49,10 @@ export default function WebsitePage() {
   const [testModal, setTestModal]   = useState(false);
   const [editingTest, setEditTest]  = useState<Testimonio | null>(null);
   const [testForm, setTestForm]     = useState({ nombre: '', testimonio: '', calificacion: 5, contexto: '', plataforma: 'Google' });
+
+  // Instagram modal
+  const [igModal, setIgModal]       = useState(false);
+  const [igForm, setIgForm]         = useState({ titulo: '', urlPost: '', tipo: 'Post' });
 
   // Promocion modal
   const [promoModal, setPromoModal] = useState(false);
@@ -84,6 +90,9 @@ export default function WebsitePage() {
     }
     if (tab === 'promociones' && promociones.length === 0) {
       fetch(`/api/${tenant}/promociones`).then(r => r.json()).then(setPromociones).catch(() => {});
+    }
+    if (tab === 'instagram' && igLinks.length === 0) {
+      fetch(`/api/${tenant}/instagram`).then(r => r.json()).then(setIgLinks).catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, tenant]);
@@ -333,6 +342,42 @@ export default function WebsitePage() {
     finally { setSaving(null); }
   }
 
+  // ─── Instagram actions ────────────────────────────────────────────────────────
+
+  async function saveIg() {
+    if (!igForm.urlPost) return;
+    setSaving('ig-new');
+    try {
+      const body = { titulo: igForm.titulo || igForm.urlPost, urlPost: igForm.urlPost, tipo: igForm.tipo, orden: igLinks.length };
+      const res = await fetch(`/api/${tenant}/instagram`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const created = await res.json();
+      setIgLinks(prev => [...prev, { id: created.id, activo: true, ...body }]);
+      showToast('Post agregado');
+    } catch { showToast('Error'); }
+    finally { setSaving(null); setIgModal(false); setIgForm({ titulo: '', urlPost: '', tipo: 'Post' }); }
+  }
+
+  async function deleteIg(id: string) {
+    if (!confirm('¿Eliminar este post?')) return;
+    setSaving('ig-' + id);
+    try {
+      await fetch(`/api/${tenant}/instagram/${id}`, { method: 'DELETE' });
+      setIgLinks(prev => prev.filter(l => l.id !== id));
+      showToast('Eliminado');
+    } catch { showToast('Error'); }
+    finally { setSaving(null); }
+  }
+
+  async function patchIg(id: string, fields: Partial<IgLink>) {
+    setSaving('ig-' + id);
+    try {
+      await fetch(`/api/${tenant}/instagram/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
+      setIgLinks(prev => prev.map(l => l.id === id ? { ...l, ...fields } : l));
+      showToast('Guardado');
+    } catch { showToast('Error'); }
+    finally { setSaving(null); }
+  }
+
   const daily  = items.filter(i => i.platoDelDia);
   const activeCount = items.filter(i => i.activo).length;
 
@@ -358,6 +403,7 @@ export default function WebsitePage() {
           ['galeria',     '🖼️ Galería'],
           ['promociones', '🎁 Promos'],
           ['contacto',    '📋 Contacto'],
+          ['instagram',   '📸 Instagram'],
         ] as [Tab, string][]).map(([t, label]) => (
           <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {label}
@@ -658,6 +704,50 @@ export default function WebsitePage() {
             </>
           )}
 
+          {/* ── INSTAGRAM ─────────────────────────────────────────────────── */}
+          {tab === 'instagram' && (
+            <>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <div style={{ fontSize:13, color:'var(--text-2)' }}>
+                  {igLinks.length} posts · {igLinks.filter(l => l.activo).length} activos
+                </div>
+                <button className="btn-primary" onClick={() => { setIgForm({ titulo:'', urlPost:'' }); setIgModal(true); }}>
+                  <PlusIcon size={13} /> Agregar post
+                </button>
+              </div>
+              {igLinks.length === 0 ? (
+                <div className="empty">Sin posts de Instagram. Agregá el link de un post para mostrarlo en el sitio.</div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {igLinks.map(link => (
+                    <div key={link.id} className="card" style={{ opacity: saving === 'ig-'+link.id ? 0.6 : 1 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                        <div style={{ width:44, height:44, borderRadius:8, background:'var(--bg-elevated)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
+                          📸
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {link.titulo || 'Sin título'}
+                          </div>
+                          <a href={link.urlPost} target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize:11, color:'var(--accent-1)', textDecoration:'none', display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {link.urlPost}
+                          </a>
+                        </div>
+                        <span className={`badge badge-${link.activo ? 'confirmed' : 'inactive'}`}
+                          style={{ cursor:'pointer', flexShrink:0 }}
+                          onClick={() => patchIg(link.id, { activo: !link.activo })}>
+                          {link.activo ? 'Activo' : 'Oculto'}
+                        </span>
+                        <button className="abtn abtn-canc" onClick={() => deleteIg(link.id)}><TrashIcon size={12} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           {/* ── CONTACTO ──────────────────────────────────────────────────── */}
           {tab === 'contacto' && (
             <div className="card" style={{ maxWidth:560 }}>
@@ -898,6 +988,43 @@ export default function WebsitePage() {
             <button className="btn-sec" onClick={() => setPromoModal(false)}>Cancelar</button>
             <button className="btn-primary" onClick={savePromo} disabled={saving === 'promo-new'}>
               {saving === 'promo-new' ? 'Guardando…' : editingPromo ? 'Guardar cambios' : 'Agregar promo'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Modal Instagram ──────────────────────────────────────────────────── */}
+      <div className={`modal-ov ${igModal ? 'open' : ''}`} onClick={e => e.target === e.currentTarget && setIgModal(false)}>
+        <div className="modal" style={{ maxWidth:480 }}>
+          <div className="modal-hd">
+            <div className="modal-title">Agregar post de Instagram</div>
+            <button className="modal-x" onClick={() => setIgModal(false)}>✕</button>
+          </div>
+          <div className="field-group">
+            <label className="field-label">URL del post</label>
+            <input className="field-input" placeholder="https://www.instagram.com/p/..." value={igForm.urlPost}
+              onChange={e => setIgForm(p => ({ ...p, urlPost: e.target.value }))} />
+            <div style={{ fontSize:11, color:'var(--text-3)', marginTop:4 }}>
+              Copiá el link del post desde Instagram (ej: instagram.com/p/ABC123/)
+            </div>
+          </div>
+          <div className="m-row">
+            <div className="field-group">
+              <label className="field-label">Etiqueta (opcional)</label>
+              <input className="field-input" placeholder="ej. Baby Shower, Panadería..." value={igForm.titulo}
+                onChange={e => setIgForm(p => ({ ...p, titulo: e.target.value }))} />
+            </div>
+            <div className="field-group">
+              <label className="field-label">Tipo</label>
+              <select className="field-input" value={igForm.tipo} onChange={e => setIgForm(p => ({ ...p, tipo: e.target.value }))}>
+                {['Post', 'Reel', 'Story', 'Destacado'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="modal-foot">
+            <button className="btn-sec" onClick={() => setIgModal(false)}>Cancelar</button>
+            <button className="btn-primary" onClick={saveIg} disabled={saving === 'ig-new'}>
+              {saving === 'ig-new' ? 'Guardando…' : 'Agregar post'}
             </button>
           </div>
         </div>

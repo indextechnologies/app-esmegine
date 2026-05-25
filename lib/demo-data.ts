@@ -6,7 +6,7 @@ export const CLIENTS = [
     emoji: '☕',
     color: '#f59e0b',
     colorBg: 'rgba(245,158,11,.14)',
-    website: 'https://www.bompain.indexte.com',
+    website: 'https://bompain.indexte.com',
     phone: '+595 981 123 456',
     email: 'hola@bompain.com',
     address: 'Av. Mcal. López 1234, Asunción',

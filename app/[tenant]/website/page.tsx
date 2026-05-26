@@ -5,7 +5,8 @@ import { useClient } from '../../../lib/use-clients';
 import { PlusIcon, EditIcon, TrashIcon, ExternalIcon, UtensilsIcon, SunIcon, ClockIcon, MessageIcon, ImageIcon, TagIcon, FileTextIcon, CameraIcon } from '../../../components/Icons';
 
 type Category    = { id: string; nombre: string; icono: string; orden: number; activo: boolean; modoVista: boolean; };
-type MenuItem    = { id: string; nombre: string; descripcion: string; precio: number; activo: boolean; destacado: boolean; platoDelDia: boolean; categoriaId: string | null; imagenUrl: string | null; };
+type SubCategory = { id: string; nombre: string; icono: string; orden: number; activo: boolean; categoriaId: string | null; };
+type MenuItem    = { id: string; nombre: string; descripcion: string; precio: number; activo: boolean; destacado: boolean; platoDelDia: boolean; categoriaId: string | null; subcategoriaId: string | null; imagenUrl: string | null; };
 type Horario     = { id: string; dia: string; horaApertura: string; horaCierre: string; cerrado: boolean; nota: string; orden: number; };
 type GaleriaItem = { id: string; titulo: string; urlImagen: string; altText: string; seccion: string; activo: boolean; orden: number; };
 type Testimonio  = { id: string; nombre: string; testimonio: string; calificacion: number; contexto: string; plataforma: string; activo: boolean; };
@@ -18,32 +19,38 @@ export default function WebsitePage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { client } = useClient(tenant);
 
-  const [tab, setTab]             = useState<Tab>('menu');
-  const [items, setItems]         = useState<MenuItem[]>([]);
-  const [categories, setCats]     = useState<Category[]>([]);
-  const [horarios, setHorarios]   = useState<Horario[]>([]);
-  const [galeria, setGaleria]     = useState<GaleriaItem[]>([]);
+  const [tab, setTab]               = useState<Tab>('menu');
+  const [items, setItems]           = useState<MenuItem[]>([]);
+  const [categories, setCats]       = useState<Category[]>([]);
+  const [subcategories, setSubcats] = useState<SubCategory[]>([]);
+  const [horarios, setHorarios]     = useState<Horario[]>([]);
+  const [galeria, setGaleria]       = useState<GaleriaItem[]>([]);
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [promociones, setPromociones] = useState<Promocion[]>([]);
-  const [igLinks, setIgLinks]     = useState<IgLink[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState<string | null>(null);
-  const [toast, setToast]         = useState('');
+  const [igLinks, setIgLinks]       = useState<IgLink[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [saving, setSaving]         = useState<string | null>(null);
+  const [toast, setToast]           = useState('');
 
   // Item modal
-  const [itemModal, setItemModal]   = useState(false);
-  const [editingItem, setEditItem]  = useState<MenuItem | null>(null);
-  const [itemForm, setItemForm]     = useState({ nombre: '', descripcion: '', precio: '', categoriaId: '', destacado: false, imagenUrl: '' });
+  const [itemModal, setItemModal]  = useState(false);
+  const [editingItem, setEditItem] = useState<MenuItem | null>(null);
+  const [itemForm, setItemForm]    = useState({ nombre: '', descripcion: '', precio: '', categoriaId: '', subcategoriaId: '', destacado: false, imagenUrl: '' });
 
   // Category modal
-  const [catModal, setCatModal]     = useState(false);
-  const [editingCat, setEditCat]    = useState<Category | null>(null);
-  const [catForm, setCatForm]       = useState({ nombre: '', icono: '🍽️' });
+  const [catModal, setCatModal]   = useState(false);
+  const [editingCat, setEditCat]  = useState<Category | null>(null);
+  const [catForm, setCatForm]     = useState({ nombre: '', icono: '🍽️' });
+
+  // SubCategory modal
+  const [subCatModal, setSubCatModal]   = useState(false);
+  const [editingSubCat, setEditSubCat]  = useState<SubCategory | null>(null);
+  const [subCatForm, setSubCatForm]     = useState({ nombre: '', icono: '', categoriaId: '' });
 
   // Galería modal
-  const [galModal, setGalModal]     = useState(false);
-  const [editingGal, setEditGal]    = useState<GaleriaItem | null>(null);
-  const [galForm, setGalForm]       = useState({ titulo: '', urlImagen: '', altText: '', seccion: 'Galería', orden: 0 });
+  const [galModal, setGalModal]   = useState(false);
+  const [editingGal, setEditGal]  = useState<GaleriaItem | null>(null);
+  const [galForm, setGalForm]     = useState({ titulo: '', urlImagen: '', altText: '', seccion: 'Galería', orden: 0 });
 
   // Testimonio modal
   const [testModal, setTestModal]   = useState(false);
@@ -51,13 +58,13 @@ export default function WebsitePage() {
   const [testForm, setTestForm]     = useState({ nombre: '', testimonio: '', calificacion: 5, contexto: '', plataforma: 'Google' });
 
   // Instagram modal
-  const [igModal, setIgModal]       = useState(false);
-  const [igForm, setIgForm]         = useState({ titulo: '', urlPost: '', tipo: 'Post' });
+  const [igModal, setIgModal] = useState(false);
+  const [igForm, setIgForm]   = useState({ titulo: '', urlPost: '', tipo: 'Post' });
 
   // Promocion modal
-  const [promoModal, setPromoModal] = useState(false);
-  const [editingPromo, setEditPromo] = useState<Promocion | null>(null);
-  const [promoForm, setPromoForm]   = useState({ titulo: '', descripcion: '', descuento: 0, tipo: 'Especial', imagenUrl: '', fechaInicio: '', fechaFin: '' });
+  const [promoModal, setPromoModal]   = useState(false);
+  const [editingPromo, setEditPromo]  = useState<Promocion | null>(null);
+  const [promoForm, setPromoForm]     = useState({ titulo: '', descripcion: '', descuento: 0, tipo: 'Especial', imagenUrl: '', fechaInicio: '', fechaFin: '' });
 
   function showToast(msg: string) {
     setToast(msg);
@@ -71,13 +78,13 @@ export default function WebsitePage() {
       const data = await res.json();
       setItems(data.items ?? []);
       setCats(data.categories ?? []);
+      setSubcats(data.subcategories ?? []);
     } catch { showToast('Error cargando menú'); }
     finally { setLoading(false); }
   }, [tenant]);
 
   useEffect(() => { loadMenu(); }, [loadMenu]);
 
-  // Lazy-load tab data on first visit
   useEffect(() => {
     if (tab === 'horarios' && horarios.length === 0) {
       fetch(`/api/${tenant}/horarios`).then(r => r.json()).then(setHorarios).catch(() => {});
@@ -124,22 +131,43 @@ export default function WebsitePage() {
     if (!itemForm.nombre || !itemForm.categoriaId) return;
     setSaving('new');
     try {
-      const body = { nombre: itemForm.nombre, descripcion: itemForm.descripcion, precio: parseFloat(itemForm.precio.replace(/\./g, '').replace(',', '.')) || 0, categoriaId: itemForm.categoriaId, destacado: itemForm.destacado, imagenUrl: itemForm.imagenUrl || null };
+      const body = {
+        nombre:         itemForm.nombre,
+        descripcion:    itemForm.descripcion,
+        precio:         parseFloat(itemForm.precio.replace(/\./g, '').replace(',', '.')) || 0,
+        categoriaId:    itemForm.categoriaId,
+        subcategoriaId: itemForm.subcategoriaId || null,
+        destacado:      itemForm.destacado,
+        imagenUrl:      itemForm.imagenUrl || null,
+      };
       if (editingItem) {
         await patchItem(editingItem.id, body);
       } else {
         const res = await fetch(`/api/${tenant}/menu`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const created = await res.json();
-        setItems(prev => [...prev, { id: created.id, activo: true, platoDelDia: false, ...body, categoriaId: body.categoriaId }]);
+        setItems(prev => [...prev, { id: created.id, activo: true, platoDelDia: false, ...body }]);
         showToast('Item agregado');
       }
     } catch { showToast('Error'); }
-    finally { setSaving(null); setItemModal(false); setEditItem(null); setItemForm({ nombre:'', descripcion:'', precio:'', categoriaId:'', destacado:false, imagenUrl:'' }); }
+    finally {
+      setSaving(null);
+      setItemModal(false);
+      setEditItem(null);
+      setItemForm({ nombre: '', descripcion: '', precio: '', categoriaId: '', subcategoriaId: '', destacado: false, imagenUrl: '' });
+    }
   }
 
   function openEditItem(item: MenuItem) {
     setEditItem(item);
-    setItemForm({ nombre: item.nombre, descripcion: item.descripcion, precio: item.precio.toString(), categoriaId: item.categoriaId ?? '', destacado: item.destacado, imagenUrl: item.imagenUrl ?? '' });
+    setItemForm({
+      nombre:         item.nombre,
+      descripcion:    item.descripcion,
+      precio:         item.precio.toString(),
+      categoriaId:    item.categoriaId ?? '',
+      subcategoriaId: item.subcategoriaId ?? '',
+      destacado:      item.destacado,
+      imagenUrl:      item.imagenUrl ?? '',
+    });
     setItemModal(true);
   }
 
@@ -180,7 +208,52 @@ export default function WebsitePage() {
         showToast('Categoría agregada');
       }
     } catch { showToast('Error'); }
-    finally { setSaving(null); setCatModal(false); setEditCat(null); setCatForm({ nombre:'', icono:'🍽️' }); }
+    finally { setSaving(null); setCatModal(false); setEditCat(null); setCatForm({ nombre: '', icono: '🍽️' }); }
+  }
+
+  // ─── SubCategory actions ──────────────────────────────────────────────────────
+
+  async function patchSubCat(id: string, fields: object) {
+    setSaving('sub-' + id);
+    try {
+      await fetch(`/api/${tenant}/subcategories/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
+      setSubcats(prev => prev.map(s => s.id === id ? { ...s, ...(fields as Partial<SubCategory>) } : s));
+      showToast('Guardado');
+    } catch { showToast('Error'); }
+    finally { setSaving(null); }
+  }
+
+  async function deleteSubCat(id: string) {
+    if (items.some(i => i.subcategoriaId === id)) { showToast('Mové los items antes de eliminar'); return; }
+    if (!confirm('¿Eliminar esta subcategoría?')) return;
+    setSaving('sub-' + id);
+    try {
+      await fetch(`/api/${tenant}/subcategories/${id}`, { method: 'DELETE' });
+      setSubcats(prev => prev.filter(s => s.id !== id));
+      showToast('Eliminado');
+    } catch { showToast('Error'); }
+    finally { setSaving(null); }
+  }
+
+  async function saveSubCat() {
+    if (!subCatForm.nombre || !subCatForm.categoriaId) return;
+    setSaving('sub-new');
+    try {
+      if (editingSubCat) {
+        await patchSubCat(editingSubCat.id, { nombre: subCatForm.nombre, icono: subCatForm.icono });
+      } else {
+        const orden = subcategories.filter(s => s.categoriaId === subCatForm.categoriaId).length;
+        const res = await fetch(`/api/${tenant}/subcategories`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: subCatForm.nombre, icono: subCatForm.icono, categoriaId: subCatForm.categoriaId, orden }),
+        });
+        const created = await res.json();
+        setSubcats(prev => [...prev, { id: created.id, nombre: subCatForm.nombre, icono: subCatForm.icono, orden, activo: true, categoriaId: subCatForm.categoriaId }]);
+        showToast('Subcategoría agregada');
+      }
+    } catch { showToast('Error'); }
+    finally { setSaving(null); setSubCatModal(false); setEditSubCat(null); setSubCatForm({ nombre: '', icono: '', categoriaId: '' }); }
   }
 
   // ─── Galería actions ──────────────────────────────────────────────────────────
@@ -200,7 +273,7 @@ export default function WebsitePage() {
         showToast('Imagen agregada');
       }
     } catch { showToast('Error'); }
-    finally { setSaving(null); setGalModal(false); setEditGal(null); setGalForm({ titulo:'', urlImagen:'', altText:'', seccion:'Galería', orden:0 }); }
+    finally { setSaving(null); setGalModal(false); setEditGal(null); setGalForm({ titulo: '', urlImagen: '', altText: '', seccion: 'Galería', orden: 0 }); }
   }
 
   async function deleteGal(id: string) {
@@ -241,7 +314,7 @@ export default function WebsitePage() {
         showToast('Reseña agregada');
       }
     } catch { showToast('Error'); }
-    finally { setSaving(null); setTestModal(false); setEditTest(null); setTestForm({ nombre:'', testimonio:'', calificacion:5, contexto:'', plataforma:'Google' }); }
+    finally { setSaving(null); setTestModal(false); setEditTest(null); setTestForm({ nombre: '', testimonio: '', calificacion: 5, contexto: '', plataforma: 'Google' }); }
   }
 
   async function deleteTest(id: string) {
@@ -282,7 +355,7 @@ export default function WebsitePage() {
         showToast('Promoción agregada');
       }
     } catch { showToast('Error'); }
-    finally { setSaving(null); setPromoModal(false); setEditPromo(null); setPromoForm({ titulo:'', descripcion:'', descuento:0, tipo:'Especial', imagenUrl:'', fechaInicio:'', fechaFin:'' }); }
+    finally { setSaving(null); setPromoModal(false); setEditPromo(null); setPromoForm({ titulo: '', descripcion: '', descuento: 0, tipo: 'Especial', imagenUrl: '', fechaInicio: '', fechaFin: '' }); }
   }
 
   async function deletePromo(id: string) {
@@ -321,13 +394,13 @@ export default function WebsitePage() {
   async function createHorarioBase() {
     setSaving('hor-base');
     const days = [
-      { dia:'Lunes',    horaApertura:'07:00', horaCierre:'21:00', cerrado:false, nota:'', orden:1 },
-      { dia:'Martes',   horaApertura:'07:00', horaCierre:'21:00', cerrado:false, nota:'', orden:2 },
-      { dia:'Miércoles',horaApertura:'07:00', horaCierre:'21:00', cerrado:false, nota:'', orden:3 },
-      { dia:'Jueves',   horaApertura:'07:00', horaCierre:'21:00', cerrado:false, nota:'', orden:4 },
-      { dia:'Viernes',  horaApertura:'07:00', horaCierre:'21:00', cerrado:false, nota:'', orden:5 },
-      { dia:'Sábado',   horaApertura:'08:00', horaCierre:'22:00', cerrado:false, nota:'', orden:6 },
-      { dia:'Domingo',  horaApertura:'08:00', horaCierre:'18:00', cerrado:false, nota:'', orden:7 },
+      { dia: 'Lunes',     horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 1 },
+      { dia: 'Martes',    horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 2 },
+      { dia: 'Miércoles', horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 3 },
+      { dia: 'Jueves',    horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 4 },
+      { dia: 'Viernes',   horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 5 },
+      { dia: 'Sábado',    horaApertura: '08:00', horaCierre: '22:00', cerrado: false, nota: '', orden: 6 },
+      { dia: 'Domingo',   horaApertura: '08:00', horaCierre: '18:00', cerrado: false, nota: '', orden: 7 },
     ];
     try {
       const created = [];
@@ -378,8 +451,38 @@ export default function WebsitePage() {
     finally { setSaving(null); }
   }
 
-  const daily  = items.filter(i => i.platoDelDia);
+  const daily       = items.filter(i => i.platoDelDia);
   const activeCount = items.filter(i => i.activo).length;
+
+  // Inline helper for item rows (reused inside category and subcategory groups)
+  function renderItemRow(item: MenuItem, imgMode: boolean) {
+    return (
+      <div key={item.id} className="menu-item-row" style={{ opacity: saving === item.id ? 0.6 : 1 }}>
+        {imgMode && (
+          <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'var(--bg-elevated)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {item.imagenUrl ? <img src={item.imagenUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 11, color: 'var(--text-3)' }}>sin img</span>}
+          </div>
+        )}
+        <div className="mitem-info">
+          <div className="mitem-name">
+            {item.nombre}
+            {item.destacado   && <span style={{ marginLeft: 6, fontSize: 9.5, background: 'rgba(245,158,11,.15)', color: 'var(--yellow)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>★ Dest.</span>}
+            {item.platoDelDia && <span style={{ marginLeft: 4, fontSize: 9.5, background: 'rgba(251,191,36,.15)', color: '#f59e0b', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>☀️ Hoy</span>}
+            {imgMode && !item.imagenUrl && <span style={{ marginLeft: 4, fontSize: 9.5, background: 'rgba(239,68,68,.12)', color: 'var(--red)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>sin foto</span>}
+          </div>
+          <div className="mitem-cat">{item.descripcion}</div>
+        </div>
+        <div className="mitem-price">Gs {item.precio.toLocaleString('es-PY')}</div>
+        <span className={`badge badge-${item.activo ? 'confirmed' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => patchItem(item.id, { activo: !item.activo })}>
+          {item.activo ? 'Activo' : 'Oculto'}
+        </span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button className="abtn abtn-edit" onClick={() => openEditItem(item)}><EditIcon size={12} /></button>
+          <button className="abtn abtn-canc" onClick={() => deleteItem(item.id)}><TrashIcon size={12} /></button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -388,7 +491,7 @@ export default function WebsitePage() {
         {client?.name} ·{' '}
         {client?.website && (
           <a href={client.website} target="_blank" rel="noopener"
-            style={{ color:'var(--accent-1)', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
+            style={{ color: 'var(--accent-1)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <ExternalIcon size={11} /> {client.website}
           </a>
         )}
@@ -418,76 +521,116 @@ export default function WebsitePage() {
           {/* ── MENÚ TAB ──────────────────────────────────────────────────── */}
           {tab === 'menu' && (
             <>
+              {/* Categorías */}
               <div className="card" style={{ marginBottom: 16, padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding:'10px 16px', background:'var(--bg-elevated)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                  <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:13 }}>Categorías</span>
-                  <button className="btn-primary" style={{ fontSize:11, padding:'4px 10px' }}
-                    onClick={() => { setEditCat(null); setCatForm({ nombre:'', icono:'🍽️' }); setCatModal(true); }}>
+                <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13 }}>Categorías</span>
+                  <button className="btn-primary" style={{ fontSize: 11, padding: '4px 10px' }}
+                    onClick={() => { setEditCat(null); setCatForm({ nombre: '', icono: '🍽️' }); setCatModal(true); }}>
                     <PlusIcon size={11} /> Nueva
                   </button>
                 </div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:8, padding:'12px 16px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '12px 16px' }}>
                   {categories.map(cat => (
-                    <div key={cat.id} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--bg-elevated)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 10px', opacity: saving === 'cat-'+cat.id ? 0.6 : 1 }}>
-                      <span style={{ fontSize:15 }}>{cat.icono}</span>
-                      <span style={{ fontWeight:600, fontSize:12.5 }}>{cat.nombre}</span>
-                      <button className="abtn abtn-edit" style={{ padding:'2px 6px' }} onClick={() => { setEditCat(cat); setCatForm({ nombre:cat.nombre, icono:cat.icono }); setCatModal(true); }}><EditIcon size={11} /></button>
-                      <button className="abtn abtn-canc" style={{ padding:'2px 6px' }} onClick={() => deleteCat(cat.id)}><TrashIcon size={11} /></button>
+                    <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', opacity: saving === 'cat-' + cat.id ? 0.6 : 1 }}>
+                      <span style={{ fontSize: 15 }}>{cat.icono}</span>
+                      <span style={{ fontWeight: 600, fontSize: 12.5 }}>{cat.nombre}</span>
+                      {subcategories.filter(s => s.categoriaId === cat.id).length > 0 && (
+                        <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-hover)', padding: '1px 6px', borderRadius: 10 }}>
+                          {subcategories.filter(s => s.categoriaId === cat.id).length} subs
+                        </span>
+                      )}
+                      <button className="abtn abtn-edit" style={{ padding: '2px 6px' }} onClick={() => { setEditCat(cat); setCatForm({ nombre: cat.nombre, icono: cat.icono }); setCatModal(true); }}><EditIcon size={11} /></button>
+                      <button className="abtn abtn-canc" style={{ padding: '2px 6px' }} onClick={() => deleteCat(cat.id)}><TrashIcon size={11} /></button>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                <div style={{ fontSize:13, color:'var(--text-2)' }}>{items.length} items · {activeCount} activos</div>
-                <button className="btn-primary" onClick={() => { setEditItem(null); setItemForm({ nombre:'', descripcion:'', precio:'', categoriaId: categories[0]?.id ?? '', destacado:false, imagenUrl:'' }); setItemModal(true); }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{items.length} items · {activeCount} activos</div>
+                <button className="btn-primary" onClick={() => { setEditItem(null); setItemForm({ nombre: '', descripcion: '', precio: '', categoriaId: categories[0]?.id ?? '', subcategoriaId: '', destacado: false, imagenUrl: '' }); setItemModal(true); }}>
                   <PlusIcon size={13} /> Agregar item
                 </button>
               </div>
 
+              {/* Items por Categoría → Subcategoría */}
               {categories.map(cat => {
                 const catItems = items.filter(i => i.categoriaId === cat.id);
-                if (!catItems.length) return null;
+                const catSubs  = subcategories.filter(s => s.categoriaId === cat.id);
+                if (!catItems.length && !catSubs.length) return null;
                 const imgMode = cat.modoVista;
                 return (
-                  <div key={cat.id} className="card" style={{ marginBottom:12, padding:0, overflow:'hidden' }}>
-                    <div style={{ padding:'10px 16px', background:'var(--bg-elevated)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                      <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:13.5 }}>{cat.icono} {cat.nombre}</span>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        {imgMode && <span style={{ fontSize:10, background:'rgba(99,102,241,.12)', color:'#818cf8', padding:'1px 7px', borderRadius:20, fontWeight:700 }}>🖼️ Modo imagen</span>}
-                        <span style={{ fontSize:11, color:'var(--text-3)' }}>{catItems.length} items</span>
-                        <button className="btn-primary" style={{ fontSize:11, padding:'3px 10px', minHeight:'unset', boxShadow:'none' }}
-                          onClick={() => { setEditItem(null); setItemForm({ nombre:'', descripcion:'', precio:'', categoriaId: cat.id, destacado:false, imagenUrl:'' }); setItemModal(true); }}>
+                  <div key={cat.id} className="card" style={{ marginBottom: 12, padding: 0, overflow: 'hidden' }}>
+                    {/* Categoría header */}
+                    <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13.5 }}>{cat.icono} {cat.nombre}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {imgMode && <span style={{ fontSize: 10, background: 'rgba(99,102,241,.12)', color: '#818cf8', padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>🖼️ Modo imagen</span>}
+                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{catItems.length} items</span>
+                        <button
+                          style={{ fontSize: 10, padding: '3px 9px', minHeight: 'unset', background: 'rgba(99,102,241,.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,.25)', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}
+                          onClick={() => { setEditSubCat(null); setSubCatForm({ nombre: '', icono: '', categoriaId: cat.id }); setSubCatModal(true); }}>
+                          <PlusIcon size={9} /> Subcategoría
+                        </button>
+                        <button className="btn-primary" style={{ fontSize: 11, padding: '3px 10px', minHeight: 'unset', boxShadow: 'none' }}
+                          onClick={() => { setEditItem(null); setItemForm({ nombre: '', descripcion: '', precio: '', categoriaId: cat.id, subcategoriaId: '', destacado: false, imagenUrl: '' }); setItemModal(true); }}>
                           <PlusIcon size={10} /> Agregar
                         </button>
                       </div>
                     </div>
-                    {catItems.map(item => (
-                      <div key={item.id} className="menu-item-row" style={{ opacity: saving === item.id ? 0.6 : 1 }}>
-                        {imgMode && (
-                          <div style={{ width:44, height:44, borderRadius:8, overflow:'hidden', background:'var(--bg-elevated)', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                            {item.imagenUrl ? <img src={item.imagenUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ fontSize:11, color:'var(--text-3)' }}>sin img</span>}
+
+                    {/* Grupos por subcategoría */}
+                    {catSubs.map(sub => {
+                      const subItems = catItems.filter(i => i.subcategoriaId === sub.id);
+                      return (
+                        <div key={sub.id} style={{ opacity: saving === 'sub-' + sub.id ? 0.6 : 1 }}>
+                          <div style={{ padding: '7px 16px 7px 24px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700 }}>↳</span>
+                              {sub.icono && <span style={{ fontSize: 13 }}>{sub.icono}</span>}
+                              <span style={{ fontWeight: 600, fontSize: 12.5 }}>{sub.nombre}</span>
+                              <span style={{ fontSize: 10, color: 'var(--text-3)' }}>({subItems.length})</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="abtn abtn-edit" style={{ padding: '2px 6px' }}
+                                onClick={() => { setEditSubCat(sub); setSubCatForm({ nombre: sub.nombre, icono: sub.icono, categoriaId: sub.categoriaId ?? cat.id }); setSubCatModal(true); }}>
+                                <EditIcon size={10} />
+                              </button>
+                              <button className="abtn abtn-canc" style={{ padding: '2px 6px' }} onClick={() => deleteSubCat(sub.id)}>
+                                <TrashIcon size={10} />
+                              </button>
+                              <button className="btn-primary" style={{ fontSize: 10, padding: '2px 8px', minHeight: 'unset', boxShadow: 'none' }}
+                                onClick={() => { setEditItem(null); setItemForm({ nombre: '', descripcion: '', precio: '', categoriaId: cat.id, subcategoriaId: sub.id, destacado: false, imagenUrl: '' }); setItemModal(true); }}>
+                                <PlusIcon size={9} /> Item
+                              </button>
+                            </div>
                           </div>
-                        )}
-                        <div className="mitem-info">
-                          <div className="mitem-name">
-                            {item.nombre}
-                            {item.destacado   && <span style={{ marginLeft:6, fontSize:9.5, background:'rgba(245,158,11,.15)', color:'var(--yellow)', padding:'1px 6px', borderRadius:4, fontWeight:700 }}>★ Dest.</span>}
-                            {item.platoDelDia && <span style={{ marginLeft:4, fontSize:9.5, background:'rgba(251,191,36,.15)', color:'#f59e0b', padding:'1px 6px', borderRadius:4, fontWeight:700 }}>☀️ Hoy</span>}
-                            {imgMode && !item.imagenUrl && <span style={{ marginLeft:4, fontSize:9.5, background:'rgba(239,68,68,.12)', color:'var(--red)', padding:'1px 6px', borderRadius:4, fontWeight:700 }}>sin foto</span>}
-                          </div>
-                          <div className="mitem-cat">{item.descripcion}</div>
+                          {subItems.map(item => renderItemRow(item, imgMode))}
+                          {subItems.length === 0 && (
+                            <div style={{ padding: '8px 16px 8px 36px', fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic', borderBottom: '1px solid var(--border)' }}>
+                              Sin items — agregá uno con "+ Item"
+                            </div>
+                          )}
                         </div>
-                        <div className="mitem-price">Gs {item.precio.toLocaleString('es-PY')}</div>
-                        <span className={`badge badge-${item.activo ? 'confirmed' : 'inactive'}`} style={{ cursor:'pointer' }} onClick={() => patchItem(item.id, { activo: !item.activo })}>
-                          {item.activo ? 'Activo' : 'Oculto'}
-                        </span>
-                        <div style={{ display:'flex', gap:4 }}>
-                          <button className="abtn abtn-edit" onClick={() => openEditItem(item)}><EditIcon size={12} /></button>
-                          <button className="abtn abtn-canc" onClick={() => deleteItem(item.id)}><TrashIcon size={12} /></button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+
+                    {/* Items directos sin subcategoría */}
+                    {(() => {
+                      const directItems = catItems.filter(i => !i.subcategoriaId);
+                      if (!directItems.length) return null;
+                      return (
+                        <>
+                          {catSubs.length > 0 && (
+                            <div style={{ padding: '5px 16px 5px 24px', background: 'rgba(0,0,0,.015)', borderBottom: '1px solid var(--border)' }}>
+                              <span style={{ fontSize: 10, color: 'var(--text-3)', fontStyle: 'italic' }}>Sin subcategoría</span>
+                            </div>
+                          )}
+                          {directItems.map(item => renderItemRow(item, imgMode))}
+                        </>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -498,46 +641,72 @@ export default function WebsitePage() {
           {/* ── COMIDAS DEL DÍA ───────────────────────────────────────────── */}
           {tab === 'daily' && (
             <>
-              <div className="card" style={{ marginBottom:20, borderLeft:'3px solid #f59e0b' }}>
+              <div className="card" style={{ marginBottom: 20, borderLeft: '3px solid #f59e0b' }}>
                 <div className="card-hd">
                   <div className="card-title">☀️ Hoy en {client?.name}</div>
-                  <span style={{ fontSize:12, color:'var(--text-3)' }}>{daily.length} seleccionado{daily.length !== 1 ? 's' : ''}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{daily.length} seleccionado{daily.length !== 1 ? 's' : ''}</span>
                 </div>
                 {daily.length === 0 ? (
-                  <div style={{ fontSize:13, color:'var(--text-3)', paddingTop:4 }}>Ningún item marcado como plato del día</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-3)', paddingTop: 4 }}>Ningún item marcado como plato del día</div>
                 ) : (
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:8, paddingTop:4 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 4 }}>
                     {daily.map(item => (
-                      <div key={item.id} style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.3)', borderRadius:8, padding:'6px 12px' }}>
-                        <span style={{ fontWeight:600, fontSize:13 }}>{item.nombre}</span>
-                        <span style={{ fontSize:12, color:'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</span>
-                        <button onClick={() => patchItem(item.id, { platoDelDia: false })} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-3)', fontSize:14, padding:0 }}>✕</button>
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 8, padding: '6px 12px' }}>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</span>
+                        <button onClick={() => patchItem(item.id, { platoDelDia: false })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, padding: 0 }}>✕</button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:12, fontWeight:600 }}>Seleccioná del menú completo:</div>
+              <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12, fontWeight: 600 }}>Seleccioná del menú completo:</div>
               {categories.map(cat => {
                 const catItems = items.filter(i => i.categoriaId === cat.id && i.activo);
+                const catSubs  = subcategories.filter(s => s.categoriaId === cat.id);
                 if (!catItems.length) return null;
                 return (
-                  <div key={cat.id} className="card" style={{ marginBottom:12, padding:0, overflow:'hidden' }}>
-                    <div style={{ padding:'10px 16px', background:'var(--bg-elevated)', borderBottom:'1px solid var(--border)' }}>
-                      <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:13 }}>{cat.icono} {cat.nombre}</span>
+                  <div key={cat.id} className="card" style={{ marginBottom: 12, padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13 }}>{cat.icono} {cat.nombre}</span>
                     </div>
-                    {catItems.map(item => (
-                      <div key={item.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', borderBottom:'1px solid var(--border)', background: item.platoDelDia ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor:'pointer' }}
+                    {catSubs.map(sub => {
+                      const subItems = catItems.filter(i => i.subcategoriaId === sub.id);
+                      if (!subItems.length) return null;
+                      return (
+                        <div key={sub.id}>
+                          <div style={{ padding: '5px 16px 5px 24px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>↳ {sub.icono} {sub.nombre}</span>
+                          </div>
+                          {subItems.map(item => (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: item.platoDelDia ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer' }}
+                              onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}>
+                              <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${item.platoDelDia ? '#f59e0b' : 'var(--border)'}`, background: item.platoDelDia ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {item.platoDelDia && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{item.descripcion}</div>
+                              </div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
+                              {item.platoDelDia && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>☀️ Del día</span>}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    {catItems.filter(i => !i.subcategoriaId).map(item => (
+                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: item.platoDelDia ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer' }}
                         onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}>
-                        <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${item.platoDelDia ? '#f59e0b' : 'var(--border)'}`, background: item.platoDelDia ? '#f59e0b' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                          {item.platoDelDia && <span style={{ color:'#fff', fontSize:12, fontWeight:700 }}>✓</span>}
+                        <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${item.platoDelDia ? '#f59e0b' : 'var(--border)'}`, background: item.platoDelDia ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {item.platoDelDia && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
                         </div>
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontWeight:600, fontSize:13 }}>{item.nombre}</div>
-                          <div style={{ fontSize:11, color:'var(--text-2)' }}>{item.descripcion}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{item.descripcion}</div>
                         </div>
-                        <div style={{ fontSize:13, fontWeight:600, color:'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
-                        {item.platoDelDia && <span style={{ fontSize:10, background:'rgba(245,158,11,.2)', color:'#f59e0b', padding:'2px 8px', borderRadius:20, fontWeight:700 }}>☀️ Del día</span>}
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
+                        {item.platoDelDia && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>☀️ Del día</span>}
                       </div>
                     ))}
                   </div>
@@ -548,40 +717,40 @@ export default function WebsitePage() {
 
           {/* ── HORARIOS ──────────────────────────────────────────────────── */}
           {tab === 'horarios' && (
-            <div className="card" style={{ maxWidth:560 }}>
+            <div className="card" style={{ maxWidth: 560 }}>
               <div className="card-hd">
                 <div className="card-title">Horarios de atención</div>
                 {horarios.length === 0 && saving !== 'hor-base' && (
-                  <button className="btn-primary" style={{ fontSize:12, padding:'5px 12px' }} onClick={createHorarioBase}>
+                  <button className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }} onClick={createHorarioBase}>
                     + Crear horarios base
                   </button>
                 )}
-                {saving === 'hor-base' && <span style={{ fontSize:12, color:'var(--text-3)' }}>Creando…</span>}
+                {saving === 'hor-base' && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Creando…</span>}
               </div>
               {horarios.length === 0 && saving !== 'hor-base' ? (
                 <div className="empty">Sin horarios. Hacé clic en "Crear horarios base" para comenzar.</div>
               ) : (
                 horarios.map(h => (
-                  <div key={h.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:'1px solid var(--border)', opacity: saving === 'hor-'+h.id ? 0.6 : 1 }}>
-                    <div style={{ minWidth:100, fontWeight:600, fontSize:13 }}>{h.dia}</div>
-                    <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, cursor:'pointer' }}>
+                  <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)', opacity: saving === 'hor-' + h.id ? 0.6 : 1 }}>
+                    <div style={{ minWidth: 100, fontWeight: 600, fontSize: 13 }}>{h.dia}</div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
                       <input type="checkbox" checked={h.cerrado}
                         onChange={e => patchHorario(h.id, { cerrado: e.target.checked })}
-                        style={{ accentColor:'var(--red)' }} />
+                        style={{ accentColor: 'var(--red)' }} />
                       Cerrado
                     </label>
                     {!h.cerrado && (
                       <>
-                        <input type="time" className="field-input" style={{ width:100 }} value={h.horaApertura}
+                        <input type="time" className="field-input" style={{ width: 100 }} value={h.horaApertura}
                           onChange={e => setHorarios(prev => prev.map(x => x.id === h.id ? { ...x, horaApertura: e.target.value } : x))}
                           onBlur={e => patchHorario(h.id, { horaApertura: e.target.value })} />
-                        <span style={{ color:'var(--text-3)' }}>→</span>
-                        <input type="time" className="field-input" style={{ width:100 }} value={h.horaCierre}
+                        <span style={{ color: 'var(--text-3)' }}>→</span>
+                        <input type="time" className="field-input" style={{ width: 100 }} value={h.horaCierre}
                           onChange={e => setHorarios(prev => prev.map(x => x.id === h.id ? { ...x, horaCierre: e.target.value } : x))}
                           onBlur={e => patchHorario(h.id, { horaCierre: e.target.value })} />
                       </>
                     )}
-                    {h.nota && <span style={{ fontSize:11, color:'var(--text-3)', fontStyle:'italic' }}>{h.nota}</span>}
+                    {h.nota && <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>{h.nota}</span>}
                   </div>
                 ))
               )}
@@ -591,9 +760,9 @@ export default function WebsitePage() {
           {/* ── RESEÑAS / TESTIMONIOS ─────────────────────────────────────── */}
           {tab === 'testimonios' && (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                <div style={{ fontSize:13, color:'var(--text-2)' }}>{testimonios.length} reseñas · {testimonios.filter(t => t.activo).length} visibles</div>
-                <button className="btn-primary" onClick={() => { setEditTest(null); setTestForm({ nombre:'', testimonio:'', calificacion:5, contexto:'', plataforma:'Google' }); setTestModal(true); }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{testimonios.length} reseñas · {testimonios.filter(t => t.activo).length} visibles</div>
+                <button className="btn-primary" onClick={() => { setEditTest(null); setTestForm({ nombre: '', testimonio: '', calificacion: 5, contexto: '', plataforma: 'Google' }); setTestModal(true); }}>
                   <PlusIcon size={13} /> Agregar reseña
                 </button>
               </div>
@@ -601,19 +770,19 @@ export default function WebsitePage() {
                 <div className="empty">Sin reseñas aún.</div>
               ) : (
                 <div className="stagger">{testimonios.map(t => (
-                  <div key={t.id} className="card" style={{ marginBottom:10, opacity: saving === 'test-'+t.id ? 0.6 : 1 }}>
-                    <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontWeight:700, fontSize:13 }}>{t.nombre}</div>
-                        <div style={{ fontSize:11, color:'var(--text-3)', marginBottom:6 }}>{t.contexto} · {t.plataforma} · {'★'.repeat(t.calificacion)}</div>
-                        <div style={{ fontSize:13, color:'var(--text-2)', fontStyle:'italic' }}>"{t.testimonio}"</div>
+                  <div key={t.id} className="card" style={{ marginBottom: 10, opacity: saving === 'test-' + t.id ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{t.nombre}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6 }}>{t.contexto} · {t.plataforma} · {'★'.repeat(t.calificacion)}</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-2)', fontStyle: 'italic' }}>"{t.testimonio}"</div>
                       </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:4, alignItems:'flex-end', flexShrink:0 }}>
-                        <span className={`badge badge-${t.activo ? 'confirmed' : 'inactive'}`} style={{ cursor:'pointer' }} onClick={() => patchTest(t.id, { activo: !t.activo })}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
+                        <span className={`badge badge-${t.activo ? 'confirmed' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => patchTest(t.id, { activo: !t.activo })}>
                           {t.activo ? 'Visible' : 'Oculta'}
                         </span>
-                        <div style={{ display:'flex', gap:4 }}>
-                          <button className="abtn abtn-edit" onClick={() => { setEditTest(t); setTestForm({ nombre:t.nombre, testimonio:t.testimonio, calificacion:t.calificacion, contexto:t.contexto, plataforma:t.plataforma }); setTestModal(true); }}><EditIcon size={11} /></button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="abtn abtn-edit" onClick={() => { setEditTest(t); setTestForm({ nombre: t.nombre, testimonio: t.testimonio, calificacion: t.calificacion, contexto: t.contexto, plataforma: t.plataforma }); setTestModal(true); }}><EditIcon size={11} /></button>
                           <button className="abtn abtn-canc" onClick={() => deleteTest(t.id)}><TrashIcon size={11} /></button>
                         </div>
                       </div>
@@ -627,34 +796,34 @@ export default function WebsitePage() {
           {/* ── GALERÍA ───────────────────────────────────────────────────── */}
           {tab === 'galeria' && (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                <div style={{ fontSize:13, color:'var(--text-2)' }}>{galeria.length} imágenes · {galeria.filter(g => g.activo).length} activas</div>
-                <button className="btn-primary" onClick={() => { setEditGal(null); setGalForm({ titulo:'', urlImagen:'', altText:'', seccion:'Galería', orden:galeria.length }); setGalModal(true); }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{galeria.length} imágenes · {galeria.filter(g => g.activo).length} activas</div>
+                <button className="btn-primary" onClick={() => { setEditGal(null); setGalForm({ titulo: '', urlImagen: '', altText: '', seccion: 'Galería', orden: galeria.length }); setGalModal(true); }}>
                   <PlusIcon size={13} /> Agregar imagen
                 </button>
               </div>
               {galeria.length === 0 ? (
                 <div className="empty">Sin imágenes en galería.</div>
               ) : (
-                <div className="stagger" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px, 1fr))', gap:12 }}>
+                <div className="stagger" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
                   {galeria.map(g => (
-                    <div key={g.id} style={{ border:'1px solid var(--border)', borderRadius:10, overflow:'hidden', opacity: saving === 'gal-'+g.id ? 0.6 : 1 }}>
-                      <div style={{ height:120, background:'var(--bg-elevated)', position:'relative' }}>
+                    <div key={g.id} style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', opacity: saving === 'gal-' + g.id ? 0.6 : 1 }}>
+                      <div style={{ height: 120, background: 'var(--bg-elevated)', position: 'relative' }}>
                         {g.urlImagen
-                          ? <img src={g.urlImagen} alt={g.altText} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                          : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'var(--text-3)' }}>Sin imagen</div>}
-                        <span style={{ position:'absolute', top:6, right:6, background: g.activo ? 'var(--green)' : 'var(--bg-hover)', color: g.activo ? '#fff' : 'var(--text-3)', fontSize:9, padding:'2px 7px', borderRadius:20, fontWeight:700, cursor:'pointer' }}
+                          ? <img src={g.urlImagen} alt={g.altText} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--text-3)' }}>Sin imagen</div>}
+                        <span style={{ position: 'absolute', top: 6, right: 6, background: g.activo ? 'var(--green)' : 'var(--bg-hover)', color: g.activo ? '#fff' : 'var(--text-3)', fontSize: 9, padding: '2px 7px', borderRadius: 20, fontWeight: 700, cursor: 'pointer' }}
                           onClick={() => patchGal(g.id, { activo: !g.activo })}>
                           {g.activo ? 'ON' : 'OFF'}
                         </span>
                       </div>
-                      <div style={{ padding:'8px 10px' }}>
-                        <div style={{ fontWeight:600, fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{g.titulo}</div>
-                        <div style={{ fontSize:10, color:'var(--text-3)', marginTop:2 }}>{g.seccion} · #{g.orden}</div>
+                      <div style={{ padding: '8px 10px' }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.titulo}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>{g.seccion} · #{g.orden}</div>
                       </div>
-                      <div style={{ display:'flex', gap:4, padding:'0 10px 8px' }}>
-                        <button className="abtn abtn-edit" style={{ flex:1, justifyContent:'center' }} onClick={() => { setEditGal(g); setGalForm({ titulo:g.titulo, urlImagen:g.urlImagen, altText:g.altText, seccion:g.seccion, orden:g.orden }); setGalModal(true); }}><EditIcon size={11} /> Editar</button>
-                        <button className="abtn abtn-canc" style={{ padding:'4px 8px' }} onClick={() => deleteGal(g.id)}><TrashIcon size={11} /></button>
+                      <div style={{ display: 'flex', gap: 4, padding: '0 10px 8px' }}>
+                        <button className="abtn abtn-edit" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { setEditGal(g); setGalForm({ titulo: g.titulo, urlImagen: g.urlImagen, altText: g.altText, seccion: g.seccion, orden: g.orden }); setGalModal(true); }}><EditIcon size={11} /> Editar</button>
+                        <button className="abtn abtn-canc" style={{ padding: '4px 8px' }} onClick={() => deleteGal(g.id)}><TrashIcon size={11} /></button>
                       </div>
                     </div>
                   ))}
@@ -666,9 +835,9 @@ export default function WebsitePage() {
           {/* ── PROMOCIONES ───────────────────────────────────────────────── */}
           {tab === 'promociones' && (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                <div style={{ fontSize:13, color:'var(--text-2)' }}>{promociones.length} promociones · {promociones.filter(p => p.activo).length} activas</div>
-                <button className="btn-primary" onClick={() => { setEditPromo(null); setPromoForm({ titulo:'', descripcion:'', descuento:0, tipo:'Especial', imagenUrl:'', fechaInicio:'', fechaFin:'' }); setPromoModal(true); }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{promociones.length} promociones · {promociones.filter(p => p.activo).length} activas</div>
+                <button className="btn-primary" onClick={() => { setEditPromo(null); setPromoForm({ titulo: '', descripcion: '', descuento: 0, tipo: 'Especial', imagenUrl: '', fechaInicio: '', fechaFin: '' }); setPromoModal(true); }}>
                   <PlusIcon size={13} /> Nueva promo
                 </button>
               </div>
@@ -676,24 +845,24 @@ export default function WebsitePage() {
                 <div className="empty">Sin promociones creadas.</div>
               ) : (
                 <div className="stagger">{promociones.map(p => (
-                  <div key={p.id} className="card" style={{ marginBottom:10, opacity: saving === 'promo-'+p.id ? 0.6 : 1 }}>
-                    <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
-                      {p.imagenUrl && <img src={p.imagenUrl} alt="" style={{ width:72, height:72, objectFit:'cover', borderRadius:8, flexShrink:0 }} />}
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontWeight:700, fontSize:13 }}>{p.titulo}</div>
-                        <div style={{ fontSize:11, color:'var(--text-3)', marginBottom:4 }}>
+                  <div key={p.id} className="card" style={{ marginBottom: 10, opacity: saving === 'promo-' + p.id ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      {p.imagenUrl && <img src={p.imagenUrl} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{p.titulo}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>
                           {p.tipo} · {p.descuento > 0 ? `${p.descuento}${p.tipo === 'Porcentaje' ? '%' : ' Gs'} desc.` : 'Sin descuento numérico'}
                           {p.fechaInicio && ` · Desde ${p.fechaInicio}`}
                           {p.fechaFin && ` hasta ${p.fechaFin}`}
                         </div>
-                        <div style={{ fontSize:12, color:'var(--text-2)' }}>{p.descripcion}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{p.descripcion}</div>
                       </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:4, alignItems:'flex-end', flexShrink:0 }}>
-                        <span className={`badge badge-${p.activo ? 'confirmed' : 'inactive'}`} style={{ cursor:'pointer' }} onClick={() => patchPromo(p.id, { activo: !p.activo })}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
+                        <span className={`badge badge-${p.activo ? 'confirmed' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => patchPromo(p.id, { activo: !p.activo })}>
                           {p.activo ? 'Activa' : 'Inactiva'}
                         </span>
-                        <div style={{ display:'flex', gap:4 }}>
-                          <button className="abtn abtn-edit" onClick={() => { setEditPromo(p); setPromoForm({ titulo:p.titulo, descripcion:p.descripcion, descuento:p.descuento, tipo:p.tipo, imagenUrl:p.imagenUrl, fechaInicio:p.fechaInicio, fechaFin:p.fechaFin }); setPromoModal(true); }}><EditIcon size={11} /></button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button className="abtn abtn-edit" onClick={() => { setEditPromo(p); setPromoForm({ titulo: p.titulo, descripcion: p.descripcion, descuento: p.descuento, tipo: p.tipo, imagenUrl: p.imagenUrl, fechaInicio: p.fechaInicio, fechaFin: p.fechaFin }); setPromoModal(true); }}><EditIcon size={11} /></button>
                           <button className="abtn abtn-canc" onClick={() => deletePromo(p.id)}><TrashIcon size={11} /></button>
                         </div>
                       </div>
@@ -707,35 +876,35 @@ export default function WebsitePage() {
           {/* ── INSTAGRAM ─────────────────────────────────────────────────── */}
           {tab === 'instagram' && (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-                <div style={{ fontSize:13, color:'var(--text-2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
                   {igLinks.length} posts · {igLinks.filter(l => l.activo).length} activos
                 </div>
-                <button className="btn-primary" onClick={() => { setIgForm({ titulo:'', urlPost:'', tipo:'Post' }); setIgModal(true); }}>
+                <button className="btn-primary" onClick={() => { setIgForm({ titulo: '', urlPost: '', tipo: 'Post' }); setIgModal(true); }}>
                   <PlusIcon size={13} /> Agregar post
                 </button>
               </div>
               {igLinks.length === 0 ? (
                 <div className="empty">Sin posts de Instagram. Agregá el link de un post para mostrarlo en el sitio.</div>
               ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {igLinks.map(link => (
-                    <div key={link.id} className="card" style={{ opacity: saving === 'ig-'+link.id ? 0.6 : 1 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        <div style={{ width:44, height:44, borderRadius:8, background:'var(--bg-elevated)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>
+                    <div key={link.id} className="card" style={{ opacity: saving === 'ig-' + link.id ? 0.6 : 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                           📸
                         </div>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontWeight:600, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {link.titulo || 'Sin título'}
                           </div>
                           <a href={link.urlPost} target="_blank" rel="noopener noreferrer"
-                            style={{ fontSize:11, color:'var(--accent-1)', textDecoration:'none', display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            style={{ fontSize: 11, color: 'var(--accent-1)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {link.urlPost}
                           </a>
                         </div>
                         <span className={`badge badge-${link.activo ? 'confirmed' : 'inactive'}`}
-                          style={{ cursor:'pointer', flexShrink:0 }}
+                          style={{ cursor: 'pointer', flexShrink: 0 }}
                           onClick={() => patchIg(link.id, { activo: !link.activo })}>
                           {link.activo ? 'Activo' : 'Oculto'}
                         </span>
@@ -750,22 +919,22 @@ export default function WebsitePage() {
 
           {/* ── CONTACTO ──────────────────────────────────────────────────── */}
           {tab === 'contacto' && (
-            <div className="card" style={{ maxWidth:560 }}>
+            <div className="card" style={{ maxWidth: 560 }}>
               <div className="card-hd"><div className="card-title">Información de contacto</div></div>
-              <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {([
-                  { label:'Nombre del negocio', val: client?.name ?? '' },
-                  { label:'Teléfono / WhatsApp', val: client?.phone ?? '' },
-                  { label:'Email',               val: client?.email ?? '' },
-                  { label:'Dirección',           val: client?.address ?? '' },
-                  { label:'Instagram',           val: client?.instagram ?? '' },
+                  { label: 'Nombre del negocio', val: client?.name ?? '' },
+                  { label: 'Teléfono / WhatsApp', val: client?.phone ?? '' },
+                  { label: 'Email',               val: client?.email ?? '' },
+                  { label: 'Dirección',           val: client?.address ?? '' },
+                  { label: 'Instagram',           val: client?.instagram ?? '' },
                 ]).map(f => (
                   <div key={f.label} className="field-group">
                     <label className="field-label">{f.label}</label>
                     <input className="field-input" defaultValue={f.val} />
                   </div>
                 ))}
-                <button className="btn-primary" style={{ alignSelf:'flex-start', marginTop:8 }}
+                <button className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: 8 }}
                   onClick={() => showToast('Próximamente: edición de contacto desde Notion')}>Guardar cambios</button>
               </div>
             </div>
@@ -780,12 +949,23 @@ export default function WebsitePage() {
             <div className="modal-title">{editingItem ? 'Editar item' : 'Nuevo item'}</div>
             <button className="modal-x" onClick={() => setItemModal(false)}>✕</button>
           </div>
-          <div className="field-group">
-            <label className="field-label">Categoría</label>
-            <select className="field-input" value={itemForm.categoriaId} onChange={e => setItemForm(p => ({ ...p, categoriaId: e.target.value }))}>
-              <option value="">— Seleccionar —</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
-            </select>
+          <div className="m-row">
+            <div className="field-group">
+              <label className="field-label">Categoría</label>
+              <select className="field-input" value={itemForm.categoriaId} onChange={e => setItemForm(p => ({ ...p, categoriaId: e.target.value, subcategoriaId: '' }))}>
+                <option value="">— Seleccionar —</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
+              </select>
+            </div>
+            <div className="field-group">
+              <label className="field-label">Subcategoría <span style={{ fontSize: 10, color: 'var(--text-3)' }}>(opcional)</span></label>
+              <select className="field-input" value={itemForm.subcategoriaId} onChange={e => setItemForm(p => ({ ...p, subcategoriaId: e.target.value }))} disabled={!itemForm.categoriaId}>
+                <option value="">— Sin subcategoría —</option>
+                {subcategories.filter(s => s.categoriaId === itemForm.categoriaId).map(s => (
+                  <option key={s.id} value={s.id}>{s.icono} {s.nombre}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="field-group">
             <label className="field-label">Nombre</label>
@@ -802,8 +982,8 @@ export default function WebsitePage() {
             </div>
             <div className="field-group">
               <label className="field-label">Opciones</label>
-              <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12.5, cursor:'pointer', paddingTop:10 }}>
-                <input type="checkbox" checked={itemForm.destacado} onChange={e => setItemForm(p => ({ ...p, destacado: e.target.checked }))} style={{ accentColor:'var(--accent-1)', width:14, height:14 }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer', paddingTop: 10 }}>
+                <input type="checkbox" checked={itemForm.destacado} onChange={e => setItemForm(p => ({ ...p, destacado: e.target.checked }))} style={{ accentColor: 'var(--accent-1)', width: 14, height: 14 }} />
                 Destacado
               </label>
             </div>
@@ -814,7 +994,7 @@ export default function WebsitePage() {
               <div className="field-group">
                 <label className="field-label">URL de imagen</label>
                 <input className="field-input" placeholder="https://..." value={itemForm.imagenUrl} onChange={e => setItemForm(p => ({ ...p, imagenUrl: e.target.value }))} />
-                {itemForm.imagenUrl && <img src={itemForm.imagenUrl} alt="" onError={e => (e.currentTarget.style.display='none')} style={{ marginTop:8, width:'100%', height:120, objectFit:'cover', borderRadius:8 }} />}
+                {itemForm.imagenUrl && <img src={itemForm.imagenUrl} alt="" onError={e => (e.currentTarget.style.display = 'none')} style={{ marginTop: 8, width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }} />}
               </div>
             ) : itemForm.imagenUrl ? (
               <div className="field-group">
@@ -834,25 +1014,68 @@ export default function WebsitePage() {
 
       {/* ── Modal categoría ─────────────────────────────────────────────────── */}
       <div className={`modal-ov ${catModal ? 'open' : ''}`} onClick={e => e.target === e.currentTarget && setCatModal(false)}>
-        <div className="modal" style={{ maxWidth:380 }}>
+        <div className="modal" style={{ maxWidth: 380 }}>
           <div className="modal-hd">
             <div className="modal-title">{editingCat ? 'Editar categoría' : 'Nueva categoría'}</div>
             <button className="modal-x" onClick={() => setCatModal(false)}>✕</button>
           </div>
           <div className="m-row">
-            <div className="field-group" style={{ flex:'0 0 72px' }}>
+            <div className="field-group" style={{ flex: '0 0 72px' }}>
               <label className="field-label">Emoji</label>
-              <input className="field-input" style={{ textAlign:'center', fontSize:20 }} maxLength={4} value={catForm.icono} onChange={e => setCatForm(p => ({ ...p, icono: e.target.value }))} />
+              <input className="field-input" style={{ textAlign: 'center', fontSize: 20 }} maxLength={4} value={catForm.icono} onChange={e => setCatForm(p => ({ ...p, icono: e.target.value }))} />
             </div>
             <div className="field-group">
               <label className="field-label">Nombre</label>
-              <input className="field-input" placeholder="ej. Pizzas, Bebidas..." value={catForm.nombre} onChange={e => setCatForm(p => ({ ...p, nombre: e.target.value }))} />
+              <input className="field-input" placeholder="ej. Almuerzo, Bebidas..." value={catForm.nombre} onChange={e => setCatForm(p => ({ ...p, nombre: e.target.value }))} />
             </div>
           </div>
           <div className="modal-foot">
             <button className="btn-sec" onClick={() => setCatModal(false)}>Cancelar</button>
             <button className="btn-primary" onClick={saveCat} disabled={saving === 'cat-new'}>
               {saving === 'cat-new' ? 'Guardando…' : editingCat ? 'Guardar cambios' : 'Agregar categoría'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Modal subcategoría ──────────────────────────────────────────────── */}
+      <div className={`modal-ov ${subCatModal ? 'open' : ''}`} onClick={e => e.target === e.currentTarget && setSubCatModal(false)}>
+        <div className="modal" style={{ maxWidth: 420 }}>
+          <div className="modal-hd">
+            <div className="modal-title">{editingSubCat ? 'Editar subcategoría' : 'Nueva subcategoría'}</div>
+            <button className="modal-x" onClick={() => setSubCatModal(false)}>✕</button>
+          </div>
+          {!editingSubCat && (
+            <div className="field-group">
+              <label className="field-label">Categoría padre</label>
+              <select className="field-input" value={subCatForm.categoriaId} onChange={e => setSubCatForm(p => ({ ...p, categoriaId: e.target.value }))}>
+                <option value="">— Seleccionar —</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>)}
+              </select>
+            </div>
+          )}
+          {editingSubCat && (
+            <div className="field-group">
+              <label className="field-label">Categoría</label>
+              <div className="field-input" style={{ background: 'var(--bg-elevated)', color: 'var(--text-2)', cursor: 'default' }}>
+                {categories.find(c => c.id === subCatForm.categoriaId)?.icono} {categories.find(c => c.id === subCatForm.categoriaId)?.nombre ?? '—'}
+              </div>
+            </div>
+          )}
+          <div className="m-row">
+            <div className="field-group" style={{ flex: '0 0 72px' }}>
+              <label className="field-label">Emoji</label>
+              <input className="field-input" style={{ textAlign: 'center', fontSize: 20 }} maxLength={4} placeholder="🥗" value={subCatForm.icono} onChange={e => setSubCatForm(p => ({ ...p, icono: e.target.value }))} />
+            </div>
+            <div className="field-group">
+              <label className="field-label">Nombre</label>
+              <input className="field-input" placeholder="ej. Vegetariano, Carnes, Fríos..." value={subCatForm.nombre} onChange={e => setSubCatForm(p => ({ ...p, nombre: e.target.value }))} />
+            </div>
+          </div>
+          <div className="modal-foot">
+            <button className="btn-sec" onClick={() => setSubCatModal(false)}>Cancelar</button>
+            <button className="btn-primary" onClick={saveSubCat} disabled={saving === 'sub-new'}>
+              {saving === 'sub-new' ? 'Guardando…' : editingSubCat ? 'Guardar cambios' : 'Agregar subcategoría'}
             </button>
           </div>
         </div>
@@ -872,13 +1095,13 @@ export default function WebsitePage() {
           <div className="field-group">
             <label className="field-label">URL de imagen</label>
             <input className="field-input" placeholder="https://..." value={galForm.urlImagen} onChange={e => setGalForm(p => ({ ...p, urlImagen: e.target.value }))} />
-            {galForm.urlImagen && <img src={galForm.urlImagen} alt="" onError={e => (e.currentTarget.style.display='none')} style={{ marginTop:8, width:'100%', height:140, objectFit:'cover', borderRadius:8 }} />}
+            {galForm.urlImagen && <img src={galForm.urlImagen} alt="" onError={e => (e.currentTarget.style.display = 'none')} style={{ marginTop: 8, width: '100%', height: 140, objectFit: 'cover', borderRadius: 8 }} />}
           </div>
           <div className="m-row">
             <div className="field-group">
               <label className="field-label">Sección</label>
               <select className="field-input" value={galForm.seccion} onChange={e => setGalForm(p => ({ ...p, seccion: e.target.value }))}>
-                {['Galería','Hero','Carta','Equipo','Fondo','Otro'].map(s => <option key={s}>{s}</option>)}
+                {['Galería', 'Hero', 'Carta', 'Equipo', 'Fondo', 'Otro'].map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div className="field-group">
@@ -918,19 +1141,19 @@ export default function WebsitePage() {
           </div>
           <div className="field-group">
             <label className="field-label">Reseña</label>
-            <textarea className="field-input" placeholder="Texto de la reseña..." value={testForm.testimonio} onChange={e => setTestForm(p => ({ ...p, testimonio: e.target.value }))} style={{ minHeight:80, resize:'vertical' }} />
+            <textarea className="field-input" placeholder="Texto de la reseña..." value={testForm.testimonio} onChange={e => setTestForm(p => ({ ...p, testimonio: e.target.value }))} style={{ minHeight: 80, resize: 'vertical' }} />
           </div>
           <div className="m-row">
             <div className="field-group">
               <label className="field-label">Calificación</label>
               <select className="field-input" value={testForm.calificacion} onChange={e => setTestForm(p => ({ ...p, calificacion: parseInt(e.target.value) }))}>
-                {[5,4,3,2,1].map(n => <option key={n} value={n}>{'★'.repeat(n)} ({n})</option>)}
+                {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{'★'.repeat(n)} ({n})</option>)}
               </select>
             </div>
             <div className="field-group">
               <label className="field-label">Plataforma</label>
               <select className="field-input" value={testForm.plataforma} onChange={e => setTestForm(p => ({ ...p, plataforma: e.target.value }))}>
-                {['Google','Facebook','Instagram','Directo','TripAdvisor'].map(pl => <option key={pl}>{pl}</option>)}
+                {['Google', 'Facebook', 'Instagram', 'Directo', 'TripAdvisor'].map(pl => <option key={pl}>{pl}</option>)}
               </select>
             </div>
           </div>
@@ -956,13 +1179,13 @@ export default function WebsitePage() {
           </div>
           <div className="field-group">
             <label className="field-label">Descripción</label>
-            <textarea className="field-input" placeholder="Detalles de la promo..." value={promoForm.descripcion} onChange={e => setPromoForm(p => ({ ...p, descripcion: e.target.value }))} style={{ minHeight:70, resize:'vertical' }} />
+            <textarea className="field-input" placeholder="Detalles de la promo..." value={promoForm.descripcion} onChange={e => setPromoForm(p => ({ ...p, descripcion: e.target.value }))} style={{ minHeight: 70, resize: 'vertical' }} />
           </div>
           <div className="m-row">
             <div className="field-group">
               <label className="field-label">Tipo</label>
               <select className="field-input" value={promoForm.tipo} onChange={e => setPromoForm(p => ({ ...p, tipo: e.target.value }))}>
-                {['Porcentaje','Monto fijo','Especial','2x1'].map(t => <option key={t}>{t}</option>)}
+                {['Porcentaje', 'Monto fijo', 'Especial', '2x1'].map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div className="field-group">
@@ -995,7 +1218,7 @@ export default function WebsitePage() {
 
       {/* ── Modal Instagram ──────────────────────────────────────────────────── */}
       <div className={`modal-ov ${igModal ? 'open' : ''}`} onClick={e => e.target === e.currentTarget && setIgModal(false)}>
-        <div className="modal" style={{ maxWidth:480 }}>
+        <div className="modal" style={{ maxWidth: 480 }}>
           <div className="modal-hd">
             <div className="modal-title">Agregar post de Instagram</div>
             <button className="modal-x" onClick={() => setIgModal(false)}>✕</button>
@@ -1004,7 +1227,7 @@ export default function WebsitePage() {
             <label className="field-label">URL del post</label>
             <input className="field-input" placeholder="https://www.instagram.com/p/..." value={igForm.urlPost}
               onChange={e => setIgForm(p => ({ ...p, urlPost: e.target.value }))} />
-            <div style={{ fontSize:11, color:'var(--text-3)', marginTop:4 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
               Copiá el link del post desde Instagram (ej: instagram.com/p/ABC123/)
             </div>
           </div>

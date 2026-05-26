@@ -1,15 +1,16 @@
 const NOTION_VERSION = '2022-06-28';
 
 const DB = {
-  menu:        'bfcd74dc-ee82-484c-bc51-5156462166d6',
-  categories:  'a2c5a8c9-9d48-4274-8a6e-b7b9b557a759',
-  reservas:    'a35bfc4f-7cd6-41cd-a264-5315d75a03d0',
-  tenants:     'c52d2d58-6f3a-463a-b347-dc5dda3f0e9b',
-  horarios:    '80246a64-2a6d-4de7-a85f-692a3faca333',
-  galeria:     'ed962b28-575f-4fc3-b69d-d1640b43d97a',
-  testimonios: 'ac829574-7508-4a95-9308-5281ef11e95b',
-  promociones: '6558132f-a2cd-4b74-b4c0-695ff0899ac6',
-  instagram:   'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
+  menu:           'bfcd74dc-ee82-484c-bc51-5156462166d6',
+  categories:     'a2c5a8c9-9d48-4274-8a6e-b7b9b557a759',
+  subcategories:  '36c1d551-0e64-81bd-95e7-e78eb9c76326',
+  reservas:       'a35bfc4f-7cd6-41cd-a264-5315d75a03d0',
+  tenants:        'c52d2d58-6f3a-463a-b347-dc5dda3f0e9b',
+  horarios:       '80246a64-2a6d-4de7-a85f-692a3faca333',
+  galeria:        'ed962b28-575f-4fc3-b69d-d1640b43d97a',
+  testimonios:    'ac829574-7508-4a95-9308-5281ef11e95b',
+  promociones:    '6558132f-a2cd-4b74-b4c0-695ff0899ac6',
+  instagram:      'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
 };
 
 // ─── Tenant cache (populated lazily from Notion) ────────────────────────────
@@ -154,8 +155,18 @@ export type NotionMenuItem = {
   destacado: boolean;
   platoDelDia: boolean;
   categoriaId: string | null;
+  subcategoriaId: string | null;
   imagenUrl: string | null;
   alergenos: string[];
+};
+
+export type NotionSubCategory = {
+  id: string;
+  nombre: string;
+  icono: string;
+  orden: number;
+  activo: boolean;
+  categoriaId: string | null;
 };
 
 export type NotionCategory = {
@@ -191,16 +202,17 @@ export async function getMenuItems(tenant: string): Promise<NotionMenuItem[]> {
   );
   return rows.map((p: any) => ({
     id: p.id,
-    nombre:      p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
-    descripcion: p.properties['Descripción']?.rich_text?.[0]?.plain_text ?? '',
-    precio:      p.properties['Precio']?.number ?? 0,
-    orden:       p.properties['Orden']?.number ?? 0,
-    activo:      p.properties['Activo']?.checkbox ?? false,
-    destacado:   p.properties['Destacado']?.checkbox ?? false,
-    platoDelDia: p.properties['Plato del Día']?.checkbox ?? false,
-    categoriaId: p.properties['Categoría']?.relation?.[0]?.id ?? null,
-    imagenUrl:   p.properties['Imagen URL']?.url ?? null,
-    alergenos:   p.properties['Alérgenos']?.multi_select?.map((a: any) => a.name) ?? [],
+    nombre:         p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    descripcion:    p.properties['Descripción']?.rich_text?.[0]?.plain_text ?? '',
+    precio:         p.properties['Precio']?.number ?? 0,
+    orden:          p.properties['Orden']?.number ?? 0,
+    activo:         p.properties['Activo']?.checkbox ?? false,
+    destacado:      p.properties['Destacado']?.checkbox ?? false,
+    platoDelDia:    p.properties['Plato del Día']?.checkbox ?? false,
+    categoriaId:    p.properties['Categoría']?.relation?.[0]?.id ?? null,
+    subcategoriaId: p.properties['Subcategoría']?.relation?.[0]?.id ?? null,
+    imagenUrl:      p.properties['Imagen URL']?.url ?? null,
+    alergenos:      p.properties['Alérgenos']?.multi_select?.map((a: any) => a.name) ?? [],
   }));
 }
 
@@ -251,36 +263,92 @@ export async function deleteCategory(pageId: string) {
   return archivePage(pageId);
 }
 
+// ─── SubCategories ────────────────────────────────────────────────────────────
+
+export async function getSubCategories(tenant: string): Promise<NotionSubCategory[]> {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.subcategories,
+    { property: 'Tenant', relation: { contains: tenantId } },
+    [{ property: 'Orden', direction: 'ascending' }],
+  );
+  return rows.map((p: any) => ({
+    id:          p.id,
+    nombre:      p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    icono:       p.properties['Icono']?.rich_text?.[0]?.plain_text ?? '',
+    orden:       p.properties['Orden']?.number ?? 0,
+    activo:      p.properties['Activo']?.checkbox ?? false,
+    categoriaId: p.properties['Categoria']?.relation?.[0]?.id ?? null,
+  }));
+}
+
+export async function createSubCategory(tenant: string, data: {
+  nombre: string; icono?: string; categoriaId: string; orden?: number;
+}) {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.subcategories, {
+    'Nombre':   { title: [{ text: { content: data.nombre } }] },
+    'Icono':    { rich_text: [{ text: { content: data.icono ?? '' } }] },
+    'Activo':   { checkbox: true },
+    'Orden':    { number: data.orden ?? 0 },
+    'Categoria': { relation: [{ id: data.categoriaId }] },
+    'Tenant':   { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateSubCategory(pageId: string, fields: Partial<{
+  nombre: string; icono: string; activo: boolean; orden: number;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.nombre  !== undefined) props['Nombre'] = { title: [{ text: { content: fields.nombre } }] };
+  if (fields.icono   !== undefined) props['Icono']  = { rich_text: [{ text: { content: fields.icono } }] };
+  if (fields.activo  !== undefined) props['Activo'] = { checkbox: fields.activo };
+  if (fields.orden   !== undefined) props['Orden']  = { number: fields.orden };
+  return patchPage(pageId, props);
+}
+
+export async function deleteSubCategory(pageId: string) {
+  return archivePage(pageId);
+}
+
 export async function updateMenuItem(pageId: string, fields: Partial<{
   nombre: string; descripcion: string; precio: number;
   activo: boolean; destacado: boolean; platoDelDia: boolean; imagenUrl: string;
+  subcategoriaId: string | null;
 }>) {
   const props: Record<string, unknown> = {};
-  if (fields.nombre      !== undefined) props['Nombre']       = { title: [{ text: { content: fields.nombre } }] };
-  if (fields.descripcion !== undefined) props['Descripción']  = { rich_text: [{ text: { content: fields.descripcion } }] };
-  if (fields.precio      !== undefined) props['Precio']       = { number: fields.precio };
-  if (fields.activo      !== undefined) props['Activo']       = { checkbox: fields.activo };
-  if (fields.destacado   !== undefined) props['Destacado']    = { checkbox: fields.destacado };
-  if (fields.platoDelDia !== undefined) props['Plato del Día'] = { checkbox: fields.platoDelDia };
-  if (fields.imagenUrl   !== undefined) props['Imagen URL']   = { url: fields.imagenUrl || null };
+  if (fields.nombre         !== undefined) props['Nombre']       = { title: [{ text: { content: fields.nombre } }] };
+  if (fields.descripcion    !== undefined) props['Descripción']  = { rich_text: [{ text: { content: fields.descripcion } }] };
+  if (fields.precio         !== undefined) props['Precio']       = { number: fields.precio };
+  if (fields.activo         !== undefined) props['Activo']       = { checkbox: fields.activo };
+  if (fields.destacado      !== undefined) props['Destacado']    = { checkbox: fields.destacado };
+  if (fields.platoDelDia    !== undefined) props['Plato del Día'] = { checkbox: fields.platoDelDia };
+  if (fields.imagenUrl      !== undefined) props['Imagen URL']   = { url: fields.imagenUrl || null };
+  if (fields.subcategoriaId !== undefined) props['Subcategoría'] = fields.subcategoriaId
+    ? { relation: [{ id: fields.subcategoriaId }] }
+    : { relation: [] };
   return patchPage(pageId, props);
 }
 
 export async function createMenuItem(tenant: string, data: {
-  nombre: string; descripcion: string; precio: number; categoriaId: string;
+  nombre: string; descripcion: string; precio: number; categoriaId: string; subcategoriaId?: string | null;
 }) {
   const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
-  return createPage(DB.menu, {
-    'Nombre':       { title: [{ text: { content: data.nombre } }] },
-    'Descripción':  { rich_text: [{ text: { content: data.descripcion } }] },
-    'Precio':       { number: data.precio },
-    'Activo':       { checkbox: true },
-    'Destacado':    { checkbox: false },
+  const props: Record<string, unknown> = {
+    'Nombre':        { title: [{ text: { content: data.nombre } }] },
+    'Descripción':   { rich_text: [{ text: { content: data.descripcion } }] },
+    'Precio':        { number: data.precio },
+    'Activo':        { checkbox: true },
+    'Destacado':     { checkbox: false },
     'Plato del Día': { checkbox: false },
-    'Categoría':    { relation: [{ id: data.categoriaId }] },
-    'Tenant':       { relation: [{ id: tenantId }] },
-  });
+    'Categoría':     { relation: [{ id: data.categoriaId }] },
+    'Tenant':        { relation: [{ id: tenantId }] },
+  };
+  if (data.subcategoriaId) props['Subcategoría'] = { relation: [{ id: data.subcategoriaId }] };
+  return createPage(DB.menu, props);
 }
 
 export async function deleteMenuItem(pageId: string) {

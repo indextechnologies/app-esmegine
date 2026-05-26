@@ -105,7 +105,7 @@ export default function AdminReservasPage() {
           {clients.map(c => <option key={c.slug} value={c.slug}>{c.emoji} {c.name}</option>)}
         </select>
         <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={load}>
-          <PlusIcon size={13} style={{ transform: 'rotate(45deg)' }} /> Actualizar
+          <span style={{ display:'inline-block', transform:'rotate(45deg)', lineHeight:0 }}><PlusIcon size={13} /></span> Actualizar
         </button>
       </div>
 

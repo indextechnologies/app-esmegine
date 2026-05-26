@@ -120,7 +120,7 @@ export default function AdminDashboard() {
           {recent.length === 0 ? (
             <div className="empty" style={{ padding: '24px 0', fontSize: 13 }}>Sin reservas aún</div>
           ) : recent.map(r => {
-            const c = CLIENTS.find(cl => cl.slug === r.tenant);
+            const c = clients.find(cl => cl.slug === r.tenant);
             return (
               <div key={r.id} className="act-item">
                 <div className={`act-dot ${dotClass(r.estado)}`} />

@@ -210,7 +210,7 @@ export async function getMenuItems(tenant: string): Promise<NotionMenuItem[]> {
     destacado:      p.properties['Destacado']?.checkbox ?? false,
     platoDelDia:    p.properties['Plato del Día']?.checkbox ?? false,
     categoriaId:    p.properties['Categoría']?.relation?.[0]?.id ?? null,
-    subcategoriaId: p.properties['Subcategoría']?.relation?.[0]?.id ?? null,
+    subcategoriaId: p.properties['Subcategoria']?.relation?.[0]?.id ?? null,
     imagenUrl:      p.properties['Imagen URL']?.url ?? null,
     alergenos:      p.properties['Alérgenos']?.multi_select?.map((a: any) => a.name) ?? [],
   }));
@@ -326,7 +326,7 @@ export async function updateMenuItem(pageId: string, fields: Partial<{
   if (fields.destacado      !== undefined) props['Destacado']    = { checkbox: fields.destacado };
   if (fields.platoDelDia    !== undefined) props['Plato del Día'] = { checkbox: fields.platoDelDia };
   if (fields.imagenUrl      !== undefined) props['Imagen URL']   = { url: fields.imagenUrl || null };
-  if (fields.subcategoriaId !== undefined) props['Subcategoría'] = fields.subcategoriaId
+  if (fields.subcategoriaId !== undefined) props['Subcategoria'] = fields.subcategoriaId
     ? { relation: [{ id: fields.subcategoriaId }] }
     : { relation: [] };
   return patchPage(pageId, props);
@@ -347,7 +347,7 @@ export async function createMenuItem(tenant: string, data: {
     'Categoría':     { relation: [{ id: data.categoriaId }] },
     'Tenant':        { relation: [{ id: tenantId }] },
   };
-  if (data.subcategoriaId) props['Subcategoría'] = { relation: [{ id: data.subcategoriaId }] };
+  if (data.subcategoriaId) props['Subcategoria'] = { relation: [{ id: data.subcategoriaId }] };
   return createPage(DB.menu, props);
 }
 

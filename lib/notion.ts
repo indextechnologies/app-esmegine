@@ -399,14 +399,14 @@ export async function createReservation(tenant: string, data: {
   const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.reservas, {
-    'Resumen':       { title: [{ text: { content: `Reserva — ${data.nombre}` } }] },
+    'Resumen':        { title: [{ text: { content: `Reserva — ${data.nombre}` } }] },
     'Nombre Cliente': { rich_text: [{ text: { content: data.nombre } }] },
-    'Email':         { email: data.email },
-    'Teléfono':      { phone_number: data.telefono },
-    'Estado':        { select: { name: 'Pendiente' } },
-    'Fecha y Hora':  { date: { start: `${data.fecha}T${data.hora}:00`, is_datetime: true } },
-    'Notas':         { rich_text: [{ text: { content: data.notas ?? '' } }] },
-    'Tenant':        { relation: [{ id: tenantId }] },
+    'Email':          { email: data.email || null },
+    'Teléfono':       { phone_number: data.telefono || null },
+    'Estado':         { select: { name: 'Pendiente' } },
+    'Fecha y Hora':   { date: { start: `${data.fecha}T${data.hora}:00` } },
+    'Notas':          { rich_text: [{ text: { content: data.notas ?? '' } }] },
+    'Tenant':         { relation: [{ id: tenantId }] },
   });
 }
 

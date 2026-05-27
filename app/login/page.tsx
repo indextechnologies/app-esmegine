@@ -104,9 +104,8 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="esm-login-logo-wrap">
-          <div className="esm-login-gem">E</div>
-          <div className="esm-login-brand">esmegine</div>
-          <div className="esm-login-sub">Index Technologies</div>
+          <img src="/icon-index.png" className="esm-login-icon" alt="Index" />
+          <div className="esm-login-brand">Indexte</div>
         </div>
 
         {/* Name */}

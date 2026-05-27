@@ -102,15 +102,21 @@ function notionHeaders() {
 }
 
 async function queryDB(dbId: string, filter?: object, sorts?: object[]) {
-  const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-    method: 'POST',
-    headers: notionHeaders(),
-    body: JSON.stringify({ filter, sorts, page_size: 100 }),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Notion query failed: ${res.status}`);
-  const data = await res.json();
-  return data.results ?? [];
+  const all: any[] = [];
+  let cursor: string | undefined;
+  do {
+    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'POST',
+      headers: notionHeaders(),
+      body: JSON.stringify({ filter, sorts, page_size: 100, start_cursor: cursor }),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Notion query failed: ${res.status}`);
+    const data = await res.json();
+    all.push(...(data.results ?? []));
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor);
+  return all;
 }
 
 async function patchPage(pageId: string, properties: object) {

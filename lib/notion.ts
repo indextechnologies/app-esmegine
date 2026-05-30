@@ -67,6 +67,13 @@ function hexToRgba(hex: string, a: number) {
   const c = hex.replace('#', '');
   return `rgba(${parseInt(c.slice(0,2),16)},${parseInt(c.slice(2,4),16)},${parseInt(c.slice(4,6),16)},${a})`;
 }
+// First URL from a Notion "Files & media" property (handles uploaded + external files).
+// Note: Notion-hosted file URLs are signed and expire (~1h); only safe with no-store reads.
+function notionFileUrl(prop: any): string | null {
+  const f = prop?.files?.[0];
+  if (!f) return null;
+  return f.type === 'external' ? (f.external?.url ?? null) : (f.file?.url ?? null);
+}
 
 export async function getClients(): Promise<NotionClient[]> {
   const rows = await queryDB(DB.tenants, undefined, [{ property: 'Nombre', direction: 'ascending' }]);
@@ -217,7 +224,7 @@ export async function getMenuItems(tenant: string): Promise<NotionMenuItem[]> {
     platoDelDia:    p.properties['Plato del Día']?.checkbox ?? false,
     categoriaId:    p.properties['Categoría']?.relation?.[0]?.id ?? null,
     subcategoriaId: p.properties['Subcategoria']?.relation?.[0]?.id ?? null,
-    imagenUrl:      p.properties['Imagen URL']?.url ?? null,
+    imagenUrl:      notionFileUrl(p.properties['Foto']) ?? p.properties['Imagen URL']?.url ?? null,
     alergenos:      p.properties['Alérgenos']?.multi_select?.map((a: any) => a.name) ?? [],
   }));
 }

@@ -4,11 +4,6 @@ import { useRouter } from 'next/navigation';
 
 const PIN_LEN = 5;
 
-const USERS: Record<string, { pin: string; dest: string; display: string }> = {
-  index:   { pin: '20260', dest: '/admin',              display: 'Index' },
-  bompain: { pin: '20261', dest: '/bom-pain/dashboard', display: 'Bom Pain' },
-};
-
 export default function LoginPage() {
   const router = useRouter();
   const [name, setName]       = useState('');
@@ -29,7 +24,7 @@ export default function LoginPage() {
     setTimeout(() => setShake(false), 400);
   };
 
-  const verify = (pin: string) => {
+  const verify = async (pin: string) => {
     const key = nameRef.current.trim().toLowerCase();
     if (!key) {
       setError('Ingresá tu nombre');
@@ -37,24 +32,29 @@ export default function LoginPage() {
       setDigits([]);
       return;
     }
-    const user = USERS[key];
-    if (!user || user.pin !== pin) {
+    setPhase('busy');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: key, pin }),
+      });
+      if (!res.ok) throw new Error('auth');
+      const user = await res.json();
+      sessionStorage.setItem('esm-session', JSON.stringify({
+        name:   user.display,
+        role:   user.role,
+        tenant: user.tenant,
+      }));
+      setGuest(user.display);
+      setPhase('welcome');
+      setTimeout(() => router.push(user.dest), 1300);
+    } catch {
+      setPhase('idle');
       setError('Nombre o PIN incorrecto');
       triggerShake();
       setDigits([]);
-      return;
     }
-    setPhase('busy');
-    sessionStorage.setItem('esm-session', JSON.stringify({
-      name:   user.display,
-      role:   key === 'index' ? 'admin' : 'client',
-      tenant: key === 'index' ? null : key,
-    }));
-    setGuest(user.display);
-    setTimeout(() => {
-      setPhase('welcome');
-      setTimeout(() => router.push(user.dest), 1300);
-    }, 300);
   };
 
   const addDigit = (d: string) => {

@@ -11,6 +11,7 @@ const DB = {
   testimonios:    'ac829574-7508-4a95-9308-5281ef11e95b',
   promociones:    '6558132f-a2cd-4b74-b4c0-695ff0899ac6',
   instagram:      'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
+  usuarios:       '21a4d81c-8f15-49ec-a291-9743ad436628',
 };
 
 // ─── Tenant cache (populated lazily from Notion) ────────────────────────────
@@ -32,6 +33,48 @@ async function loadTenantCache(): Promise<Map<string, string>> {
 async function getTenantPageId(slug: string): Promise<string | null> {
   const cache = await loadTenantCache();
   return cache.get(slug) ?? null;
+}
+
+async function getSlugByPageId(pageId: string): Promise<string | null> {
+  const cache = await loadTenantCache();
+  const norm = pageId.replace(/-/g, '');
+  for (const [slug, id] of cache) if (id === norm) return slug;
+  return null;
+}
+
+// ─── Auth (users live in the Notion "Usuarios del Sistema" DB) ───────────────
+
+export type AuthUser = {
+  display: string;
+  role:    'admin' | 'client';
+  tenant:  string | null;
+  dest:    string;
+};
+
+export async function verifyUser(usuario: string, pin: string): Promise<AuthUser | null> {
+  const key = usuario.trim().toLowerCase();
+  if (!key || !pin) return null;
+  const rows = await queryDB(DB.usuarios, {
+    and: [
+      { property: 'Usuario', rich_text: { equals: key } },
+      { property: 'Activo',  checkbox:  { equals: true } },
+    ],
+  });
+  const row = rows[0];
+  if (!row) return null;
+  const realPin = row.properties['PIN']?.rich_text?.[0]?.plain_text ?? '';
+  if (realPin !== pin) return null;
+
+  const display = row.properties['Nombre']?.title?.[0]?.plain_text ?? usuario;
+  const isAdmin = row.properties['Rol']?.select?.name === 'Super Admin';
+  const tenantRelId = row.properties['Tenant']?.relation?.[0]?.id ?? null;
+  const tenant = tenantRelId ? await getSlugByPageId(tenantRelId) : null;
+  const dest = isAdmin ? '/admin' : tenant ? `/${tenant}/dashboard` : '/admin';
+
+  // Best-effort: stamp last access (don't fail login if it errors).
+  patchPage(row.id, { 'Último Acceso': { date: { start: new Date().toISOString() } } }).catch(() => {});
+
+  return { display, role: isAdmin ? 'admin' : 'client', tenant, dest };
 }
 
 // ─── Client type & getClients ────────────────────────────────────────────────

@@ -4,7 +4,8 @@ const ALLOWED = [
   'https://bompain.indexte.com',
   'https://www.bompain.indexte.com',
   'https://demo-bompain.vercel.app',
-  'https://app.indexte.com',
+  'https://app.indexte.cloud',
+  'https://app-esmegine.vercel.app',
   'http://localhost:3000',
 ];
 

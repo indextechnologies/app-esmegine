@@ -62,7 +62,7 @@ export default function TenantConfigPage() {
           <div style={{ background:'var(--bg-base)', borderRadius:8, padding:14, fontFamily:'monospace', fontSize:11.5, color:'#a5b4fc', lineHeight:1.7, marginBottom:12, border:'1px solid var(--border)' }}>
             <span style={{ color:'#f472b6' }}>&lt;script</span>
             <span style={{ color:'#86efac' }}> src</span>
-            =<span style={{ color:'#fbbf24' }}>&quot;https://app.indexte.com/widget.js&quot;</span>
+            =<span style={{ color:'#fbbf24' }}>&quot;https://app.indexte.cloud/widget.js&quot;</span>
             <span style={{ color:'#f472b6' }}>&gt;&lt;/script&gt;</span><br />
             <span style={{ color:'#f472b6' }}>&lt;div</span><br />
             &nbsp;&nbsp;<span style={{ color:'#86efac' }}>id</span>=<span style={{ color:'#fbbf24' }}>&quot;ix-reservas&quot;</span><br />

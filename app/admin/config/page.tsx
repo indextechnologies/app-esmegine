@@ -18,7 +18,7 @@ export default function AdminConfigPage() {
           <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
             {[
               { label:'Nombre de la plataforma', val:'esmegine' },
-              { label:'Dominio',                 val:'app.indexte.com' },
+              { label:'Dominio',                 val:'app.indexte.cloud' },
               { label:'Email de soporte',         val:'soporte@indextechnologies.de' },
               { label:'Zona horaria',             val:'America/Asuncion (UTC-4)' },
             ].map(f => (

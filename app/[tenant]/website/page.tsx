@@ -36,6 +36,9 @@ export default function WebsitePage() {
   const [itemModal, setItemModal]  = useState(false);
   const [editingItem, setEditItem] = useState<MenuItem | null>(null);
   const [itemForm, setItemForm]    = useState({ nombre: '', descripcion: '', precio: '', categoriaId: '', subcategoriaId: '', destacado: false, imagenUrl: '' });
+  // Foto upload (camera/gallery) — kept separate from itemForm so its shape stays intact
+  const [fotoUpload, setFotoUpload]     = useState<{ id: string; preview: string; filename: string } | null>(null);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
 
   // Category modal
   const [catModal, setCatModal]   = useState(false);
@@ -108,11 +111,19 @@ export default function WebsitePage() {
 
   async function patchItem(id: string, fields: object) {
     setSaving(id);
+    const prev = items;
+    setItems(cur => cur.map(it => it.id === id ? { ...it, ...(fields as Partial<MenuItem>) } : it));
     try {
-      await fetch(`/api/${tenant}/menu/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
-      setItems(prev => prev.map(it => it.id === id ? { ...it, ...(fields as Partial<MenuItem>) } : it));
+      const res = await fetch(`/api/${tenant}/menu/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.status.toString());
+        throw new Error(errText);
+      }
       showToast('Guardado');
-    } catch { showToast('Error al guardar'); }
+    } catch (e) {
+      setItems(prev);
+      showToast(`Error al guardar${e instanceof Error ? ': ' + e.message.slice(0, 60) : ''}`);
+    }
     finally { setSaving(null); }
   }
 
@@ -127,6 +138,42 @@ export default function WebsitePage() {
     finally { setSaving(null); }
   }
 
+  // Downscale to max 1600px and re-encode as JPEG to stay well under the
+  // serverless body limit and keep website images light. Falls back to original.
+  async function shrinkImage(file: File): Promise<Blob> {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const max = 1600;
+      const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+      const w = Math.round(bitmap.width * scale);
+      const h = Math.round(bitmap.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, w, h);
+      const blob: Blob | null = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+      return blob ?? file;
+    } catch { return file; }
+  }
+
+  async function handleFotoUpload(file: File) {
+    setUploadingFoto(true);
+    const preview = URL.createObjectURL(file);
+    setFotoUpload({ id: '', preview, filename: file.name });
+    try {
+      const blob = await shrinkImage(file);
+      const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+      const fd = new FormData();
+      fd.append('file', new File([blob], name, { type: 'image/jpeg' }));
+      const res = await fetch(`/api/${tenant}/menu/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.fileUploadId) {
+        setFotoUpload({ id: data.fileUploadId, preview, filename: data.filename || file.name });
+        showToast('Foto lista');
+      } else { showToast('Error al subir foto'); setFotoUpload(null); }
+    } catch { showToast('Error al subir foto'); setFotoUpload(null); }
+    finally { setUploadingFoto(false); }
+  }
+
   async function saveItem() {
     if (!itemForm.nombre || !itemForm.categoriaId) return;
     setSaving('new');
@@ -139,13 +186,15 @@ export default function WebsitePage() {
         subcategoriaId: itemForm.subcategoriaId || null,
         destacado:      itemForm.destacado,
         imagenUrl:      itemForm.imagenUrl || null,
+        ...(fotoUpload?.id ? { fotoUploadId: fotoUpload.id, fotoFilename: fotoUpload.filename } : {}),
       };
       if (editingItem) {
         await patchItem(editingItem.id, body);
       } else {
         const res = await fetch(`/api/${tenant}/menu`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const created = await res.json();
-        setItems(prev => [...prev, { id: created.id, activo: true, platoDelDia: false, ...body }]);
+        const { fotoUploadId: _f, fotoFilename: _n, ...rest } = body as typeof body & { fotoUploadId?: string; fotoFilename?: string };
+        setItems(prev => [...prev, { id: created.id, activo: true, platoDelDia: false, ...rest, imagenUrl: fotoUpload?.preview ?? rest.imagenUrl }]);
         showToast('Item agregado');
       }
     } catch { showToast('Error'); }
@@ -154,11 +203,13 @@ export default function WebsitePage() {
       setItemModal(false);
       setEditItem(null);
       setItemForm({ nombre: '', descripcion: '', precio: '', categoriaId: '', subcategoriaId: '', destacado: false, imagenUrl: '' });
+      setFotoUpload(null);
     }
   }
 
   function openEditItem(item: MenuItem) {
     setEditItem(item);
+    setFotoUpload(null);
     setItemForm({
       nombre:         item.nombre,
       descripcion:    item.descripcion,
@@ -451,13 +502,13 @@ export default function WebsitePage() {
     finally { setSaving(null); }
   }
 
-  const daily       = items.filter(i => i.platoDelDia);
+  const daily       = items.filter(i => i.destacado);
   const activeCount = items.filter(i => i.activo).length;
 
   // Inline helper for item rows (reused inside category and subcategory groups)
   function renderItemRow(item: MenuItem, imgMode: boolean) {
     return (
-      <div key={item.id} className="menu-item-row" style={{ opacity: saving === item.id ? 0.6 : 1 }}>
+      <div key={item.id} className="menu-item-row" style={{ opacity: saving === item.id ? 0.6 : 1, background: item.destacado ? 'rgba(245,158,11,.04)' : undefined }}>
         {imgMode && (
           <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'var(--bg-elevated)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {item.imagenUrl ? <img src={item.imagenUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 11, color: 'var(--text-3)' }}>sin img</span>}
@@ -466,13 +517,18 @@ export default function WebsitePage() {
         <div className="mitem-info">
           <div className="mitem-name">
             {item.nombre}
-            {item.destacado   && <span style={{ marginLeft: 6, fontSize: 9.5, background: 'rgba(245,158,11,.15)', color: 'var(--yellow)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>★ Dest.</span>}
-            {item.platoDelDia && <span style={{ marginLeft: 4, fontSize: 9.5, background: 'rgba(251,191,36,.15)', color: '#f59e0b', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>☀️ Hoy</span>}
+            {item.destacado && <span style={{ marginLeft: 6, fontSize: 9.5, background: 'rgba(245,158,11,.15)', color: 'var(--yellow)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>★ Del Día</span>}
             {imgMode && !item.imagenUrl && <span style={{ marginLeft: 4, fontSize: 9.5, background: 'rgba(239,68,68,.12)', color: 'var(--red)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>sin foto</span>}
           </div>
           <div className="mitem-cat">{item.descripcion}</div>
         </div>
         <div className="mitem-price">Gs {item.precio.toLocaleString('es-PY')}</div>
+        <button
+          title={item.destacado ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
+          onClick={() => patchItem(item.id, { destacado: !item.destacado })}
+          style={{ background: item.destacado ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.destacado ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 8px', fontSize: 13, cursor: 'pointer', color: item.destacado ? '#f59e0b' : 'var(--text-3)', transition: 'all .15s' }}>
+          ★
+        </button>
         <span className={`badge badge-${item.activo ? 'confirmed' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => patchItem(item.id, { activo: !item.activo })}>
           {item.activo ? 'Activo' : 'Oculto'}
         </span>
@@ -638,82 +694,79 @@ export default function WebsitePage() {
             </>
           )}
 
-          {/* ── COMIDAS DEL DÍA ───────────────────────────────────────────── */}
-          {tab === 'daily' && (
-            <>
-              <div className="card" style={{ marginBottom: 20, borderLeft: '3px solid #f59e0b' }}>
-                <div className="card-hd">
-                  <div className="card-title">☀️ Hoy en {client?.name}</div>
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{daily.length} seleccionado{daily.length !== 1 ? 's' : ''}</span>
+          {/* ── MENÚ DEL DÍA ─────────────────────────────────────────────── */}
+          {tab === 'daily' && (() => {
+            const almuerzosCat = categories.find(c => c.nombre.toLowerCase().includes('almuerzo'));
+            const almuerzosSubs = almuerzosCat ? subcategories.filter(s => s.categoriaId === almuerzosCat.id) : [];
+            const almuerzosItems = almuerzosCat ? items.filter(i => i.categoriaId === almuerzosCat.id && i.activo) : [];
+
+            const renderToggleRow = (item: MenuItem) => (
+              <div key={item.id}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: '1px solid var(--border)', background: item.destacado ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer', transition: 'background .15s' }}
+                onClick={() => patchItem(item.id, { destacado: !item.destacado })}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${item.destacado ? '#f59e0b' : 'var(--border)'}`, background: item.destacado ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, color: '#fff', fontWeight: 700, transition: 'all .15s' }}>
+                  {item.destacado && '★'}
                 </div>
-                {daily.length === 0 ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-3)', paddingTop: 4 }}>Ningún item marcado como plato del día</div>
-                ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 4 }}>
-                    {daily.map(item => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 8, padding: '6px 12px' }}>
-                        <span style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</span>
-                        <button onClick={() => patchItem(item.id, { platoDelDia: false })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, padding: 0 }}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{item.descripcion}</div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
+                {item.destacado && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700, whiteSpace: 'nowrap' }}>★ Del Día</span>}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 12, fontWeight: 600 }}>Seleccioná del menú completo:</div>
-              {categories.map(cat => {
-                const catItems = items.filter(i => i.categoriaId === cat.id && i.activo);
-                const catSubs  = subcategories.filter(s => s.categoriaId === cat.id);
-                if (!catItems.length) return null;
-                return (
-                  <div key={cat.id} className="card" style={{ marginBottom: 12, padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13 }}>{cat.icono} {cat.nombre}</span>
+            );
+
+            return (
+              <>
+                {/* Resumen activos */}
+                <div className="card" style={{ marginBottom: 20, borderLeft: '3px solid #f59e0b' }}>
+                  <div className="card-hd">
+                    <div className="card-title">★ Menú del Día</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{daily.length} seleccionado{daily.length !== 1 ? 's' : ''} · visibles en el sitio</span>
+                      <button className="btn-secondary" style={{ fontSize: 11, padding: '3px 10px' }} onClick={loadMenu}>↺ Recargar</button>
                     </div>
-                    {catSubs.map(sub => {
-                      const subItems = catItems.filter(i => i.subcategoriaId === sub.id);
+                  </div>
+                  {daily.length === 0 ? (
+                    <div style={{ fontSize: 13, color: 'var(--text-3)', paddingTop: 4 }}>Ningún plato seleccionado — hacé clic en un item de la lista de abajo para marcarlo</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 8 }}>
+                      {daily.map(item => (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 8, padding: '6px 12px' }}>
+                          <span style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</span>
+                          <button onClick={e => { e.stopPropagation(); patchItem(item.id, { destacado: false }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Lista solo de Almuerzos */}
+                {!almuerzosCat ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No se encontró la categoría Almuerzos.</div>
+                ) : (
+                  <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13 }}>{almuerzosCat.icono} {almuerzosCat.nombre}</span>
+                    </div>
+                    {almuerzosSubs.map(sub => {
+                      const subItems = almuerzosItems.filter(i => i.subcategoriaId === sub.id);
                       if (!subItems.length) return null;
                       return (
                         <div key={sub.id}>
-                          <div style={{ padding: '5px 16px 5px 24px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
-                            <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>↳ {sub.icono} {sub.nombre}</span>
+                          <div style={{ padding: '6px 16px 6px 24px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>↳ {sub.nombre}</span>
                           </div>
-                          {subItems.map(item => (
-                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: item.platoDelDia ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer' }}
-                              onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}>
-                              <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${item.platoDelDia ? '#f59e0b' : 'var(--border)'}`, background: item.platoDelDia ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                {item.platoDelDia && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{item.descripcion}</div>
-                              </div>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
-                              {item.platoDelDia && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>☀️ Del día</span>}
-                            </div>
-                          ))}
+                          {subItems.map(renderToggleRow)}
                         </div>
                       );
                     })}
-                    {catItems.filter(i => !i.subcategoriaId).map(item => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: item.platoDelDia ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer' }}
-                        onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}>
-                        <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${item.platoDelDia ? '#f59e0b' : 'var(--border)'}`, background: item.platoDelDia ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {item.platoDelDia && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{item.descripcion}</div>
-                        </div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
-                        {item.platoDelDia && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700 }}>☀️ Del día</span>}
-                      </div>
-                    ))}
+                    {almuerzosItems.filter(i => !i.subcategoriaId).map(renderToggleRow)}
                   </div>
-                );
-              })}
-            </>
-          )}
+                )}
+              </>
+            );
+          })()}
 
           {/* ── HORARIOS ──────────────────────────────────────────────────── */}
           {tab === 'horarios' && (
@@ -986,6 +1039,19 @@ export default function WebsitePage() {
                 <input type="checkbox" checked={itemForm.destacado} onChange={e => setItemForm(p => ({ ...p, destacado: e.target.checked }))} style={{ accentColor: 'var(--accent-1)', width: 14, height: 14 }} />
                 Destacado
               </label>
+            </div>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Foto del plato</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label className="btn-sec" style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {uploadingFoto ? 'Subiendo…' : '📷 Cámara / Galería'}
+                <input type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoUpload(f); e.currentTarget.value = ''; }} />
+              </label>
+              {(fotoUpload?.preview || (editingItem?.imagenUrl && !fotoUpload)) &&
+                <img src={fotoUpload?.preview || editingItem!.imagenUrl!} alt="" style={{ width: 54, height: 54, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />}
+              {fotoUpload?.id && <span style={{ fontSize: 11, color: 'var(--green, #22c55e)', fontWeight: 600 }}>✓ lista</span>}
             </div>
           </div>
           {(() => {

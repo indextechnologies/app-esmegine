@@ -146,6 +146,33 @@ async function createPage(dbId: string, properties: object) {
   return res.json();
 }
 
+// Upload a file to Notion (Direct Upload API) and return the file_upload id,
+// which can be attached to a "Files & media" property via { type:'file_upload' }.
+export async function uploadFileToNotion(
+  bytes: ArrayBuffer, filename: string, contentType: string,
+): Promise<string> {
+  const createRes = await fetch('https://api.notion.com/v1/file_uploads', {
+    method: 'POST', headers: notionHeaders(), body: JSON.stringify({}),
+  });
+  if (!createRes.ok) throw new Error(`Notion file_upload create failed: ${createRes.status}`);
+  const { id, upload_url } = await createRes.json();
+
+  const form = new FormData();
+  form.append('file', new Blob([bytes], { type: contentType }), filename);
+  const sendRes = await fetch(upload_url, {
+    method: 'POST',
+    // No Content-Type: let fetch set the multipart boundary.
+    headers: { Authorization: `Bearer ${process.env.NOTION_TOKEN}`, 'Notion-Version': NOTION_VERSION },
+    body: form,
+  });
+  if (!sendRes.ok) throw new Error(`Notion file send failed: ${sendRes.status}`);
+  return id;
+}
+
+function fotoProp(fotoUploadId: string, filename = 'foto.jpg') {
+  return { files: [{ type: 'file_upload', file_upload: { id: fotoUploadId }, name: filename }] };
+}
+
 async function archivePage(pageId: string) {
   const res = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
     method: 'PATCH',
@@ -329,7 +356,7 @@ export async function deleteSubCategory(pageId: string) {
 export async function updateMenuItem(pageId: string, fields: Partial<{
   nombre: string; descripcion: string; precio: number;
   activo: boolean; destacado: boolean; platoDelDia: boolean; imagenUrl: string;
-  subcategoriaId: string | null;
+  subcategoriaId: string | null; fotoUploadId: string; fotoFilename: string;
 }>) {
   const props: Record<string, unknown> = {};
   if (fields.nombre         !== undefined) props['Nombre']       = { title: [{ text: { content: fields.nombre } }] };
@@ -339,6 +366,7 @@ export async function updateMenuItem(pageId: string, fields: Partial<{
   if (fields.destacado      !== undefined) props['Destacado']    = { checkbox: fields.destacado };
   if (fields.platoDelDia    !== undefined) props['Plato del Día'] = { checkbox: fields.platoDelDia };
   if (fields.imagenUrl      !== undefined) props['Imagen URL']   = { url: fields.imagenUrl || null };
+  if (fields.fotoUploadId)                 props['Foto']         = fotoProp(fields.fotoUploadId, fields.fotoFilename);
   if (fields.subcategoriaId !== undefined) props['Subcategoria'] = fields.subcategoriaId
     ? { relation: [{ id: fields.subcategoriaId }] }
     : { relation: [] };
@@ -346,7 +374,9 @@ export async function updateMenuItem(pageId: string, fields: Partial<{
 }
 
 export async function createMenuItem(tenant: string, data: {
-  nombre: string; descripcion: string; precio: number; categoriaId: string; subcategoriaId?: string | null;
+  nombre: string; descripcion: string; precio: number; categoriaId: string;
+  subcategoriaId?: string | null; imagenUrl?: string | null;
+  fotoUploadId?: string; fotoFilename?: string; destacado?: boolean;
 }) {
   const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
@@ -355,12 +385,14 @@ export async function createMenuItem(tenant: string, data: {
     'Descripción':   { rich_text: [{ text: { content: data.descripcion } }] },
     'Precio':        { number: data.precio },
     'Activo':        { checkbox: true },
-    'Destacado':     { checkbox: false },
+    'Destacado':     { checkbox: data.destacado ?? false },
     'Plato del Día': { checkbox: false },
     'Categoría':     { relation: [{ id: data.categoriaId }] },
     'Tenant':        { relation: [{ id: tenantId }] },
   };
   if (data.subcategoriaId) props['Subcategoria'] = { relation: [{ id: data.subcategoriaId }] };
+  if (data.imagenUrl)      props['Imagen URL']   = { url: data.imagenUrl };
+  if (data.fotoUploadId)   props['Foto']         = fotoProp(data.fotoUploadId, data.fotoFilename);
   return createPage(DB.menu, props);
 }
 

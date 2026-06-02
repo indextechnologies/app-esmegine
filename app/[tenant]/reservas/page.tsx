@@ -18,6 +18,7 @@ const STATUS_BADGE: Record<string, string> = {
   Cancelada:  'cancelled', Completada: 'confirmed', 'No Show': 'inactive',
 };
 const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const TODAY = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD en hora local
 
 function fmtDate(d: string) {
   if (!d) return '';
@@ -118,6 +119,14 @@ export default function ReservasPage() {
 
   const pending = data.filter(r => r.estado === 'Pendiente').length;
 
+  // Métricas (adaptadas del dashboard del motor de reservas)
+  const metrics = [
+    { label: 'Total',       val: data.length,                                          color: 'var(--text-1)' },
+    { label: 'Hoy',         val: data.filter(r => r.fecha === TODAY).length,           color: 'var(--accent-1)' },
+    { label: 'Confirmadas', val: data.filter(r => r.estado === 'Confirmada').length,   color: 'var(--green)' },
+    { label: 'Canceladas',  val: data.filter(r => r.estado === 'Cancelada').length,    color: 'var(--red)' },
+  ];
+
   return (
     <>
       {/* Header */}
@@ -134,6 +143,16 @@ export default function ReservasPage() {
         <button className="btn-primary" onClick={() => setModal(true)} style={{ flexShrink: 0 }}>
           <PlusIcon size={13} /> Nueva
         </button>
+      </div>
+
+      {/* Métricas */}
+      <div className="a1" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+        {metrics.map(m => (
+          <div key={m.label} className="kpi-card">
+            <div className="kpi-val" style={{ color: m.color }}>{m.val}</div>
+            <div className="kpi-lbl">{m.label}</div>
+          </div>
+        ))}
       </div>
 
       {/* View toggle */}
@@ -223,6 +242,7 @@ export default function ReservasPage() {
               <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <CalIcon size={13} />
                 <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 14 }}>{fmtDate(date)}</span>
+                {date === TODAY && <span className="pending-pill" style={{ marginLeft: 0, background: 'rgba(99,102,241,.15)', color: 'var(--accent-1)' }}>Hoy</span>}
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-2)' }}>
                   {slots.length} reserva{slots.length !== 1 ? 's' : ''}
                 </span>

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  DashIcon, ResIcon, UsersIcon, GlobeIcon,
+  DashIcon, ResIcon, UsersIcon, GlobeIcon, UtensilsIcon,
   BarChartIcon, SettingsIcon, CRMIcon, ArrowLeft,
 } from './Icons';
 import { useClients } from '../lib/use-clients';
@@ -101,7 +101,8 @@ export default function Sidebar(props: Props) {
   const links = [
     { href: `${base}/dashboard`, label: 'Inicio',    icon: <DashIcon size={16} />,     bnIcon: <DashIcon size={18} /> },
     { href: `${base}/reservas`,  label: 'Reservas',  icon: <ResIcon size={16} />,      bnIcon: <ResIcon size={18} /> },
-    { href: `${base}/website`,   label: 'Sitio web', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
+    { href: `${base}/menu`,      label: 'Menú',      icon: <UtensilsIcon size={16} />, bnIcon: <UtensilsIcon size={18} /> },
+    { href: `${base}/contenido`, label: 'Contenido', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
     { href: `${base}/crm`,       label: 'Clientes',  icon: <CRMIcon size={16} />,      bnIcon: <CRMIcon size={18} /> },
     { href: `${base}/analytics`, label: 'Stats',     icon: <BarChartIcon size={16} />, bnIcon: <BarChartIcon size={18} /> },
     { href: `${base}/config`,    label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },

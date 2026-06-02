@@ -7,7 +7,8 @@ import { useClient } from '../../lib/use-clients';
 const PAGE_TITLES: Record<string, string> = {
   dashboard:  'Inicio',
   reservas:   'Reservas',
-  website:    'Mi Sitio Web',
+  menu:       'Menú',
+  contenido:  'Contenido',
   crm:        'Clientes',
   analytics:  'Estadísticas',
   config:     'Configuración',

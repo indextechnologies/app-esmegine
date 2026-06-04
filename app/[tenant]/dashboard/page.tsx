@@ -68,20 +68,20 @@ export default function TenantDashboard() {
       </div>
 
       <div className="quick-grid">
-        <Link href={`/${tenant}/website`} className="quick-card">
-          <div className="quick-ic" style={{ background: 'rgba(99,102,241,.12)' }}>🌐</div>
-          <div className="quick-label">Editar sitio</div>
-          <div className="quick-sub">Menú, horarios, galería</div>
+        <Link href={`/${tenant}/menu`} className="quick-card">
+          <div className="quick-ic" style={{ background: 'rgba(99,102,241,.12)' }}>🍽️</div>
+          <div className="quick-label">Menú</div>
+          <div className="quick-sub">Platos, categorías, del día</div>
         </Link>
         <Link href={`/${tenant}/reservas`} className="quick-card">
           <div className="quick-ic" style={{ background: 'rgba(16,185,129,.12)' }}>📅</div>
           <div className="quick-label">Reservas</div>
           <div className="quick-sub">Ver y gestionar</div>
         </Link>
-        <Link href={`/${tenant}/crm`} className="quick-card">
-          <div className="quick-ic" style={{ background: 'rgba(245,158,11,.12)' }}>👥</div>
-          <div className="quick-label">Clientes</div>
-          <div className="quick-sub">Base de datos</div>
+        <Link href={`/${tenant}/contenido`} className="quick-card">
+          <div className="quick-ic" style={{ background: 'rgba(245,158,11,.12)' }}>🌐</div>
+          <div className="quick-label">Contenido</div>
+          <div className="quick-sub">Galería, horarios, reseñas</div>
         </Link>
       </div>
 

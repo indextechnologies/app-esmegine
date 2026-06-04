@@ -6,9 +6,32 @@ import { useClient } from '../../../lib/use-clients';
 export default function TenantConfigPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { client } = useClient(tenant);
-  const [toast, setToast] = useState('');
+  const [toast, setToast]       = useState('');
+  const [pinForm, setPinForm]   = useState({ current: '', next: '', confirm: '' });
+  const [pinSaving, setPinSaving] = useState(false);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
+
+  async function updatePin() {
+    if (!pinForm.current || !pinForm.next) return;
+    if (pinForm.next !== pinForm.confirm) { showToast('Los PINs nuevos no coinciden'); return; }
+    if (pinForm.next.length < 4) { showToast('El PIN debe tener al menos 4 dígitos'); return; }
+    setPinSaving(true);
+    try {
+      const res = await fetch(`/api/${tenant}/pin`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPin: pinForm.current, newPin: pinForm.next }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('PIN actualizado correctamente');
+        setPinForm({ current: '', next: '', confirm: '' });
+      } else {
+        showToast(data.error ?? 'Error al actualizar PIN');
+      }
+    } catch { showToast('Error de conexión'); }
+    finally { setPinSaving(false); }
+  }
 
   return (
     <>
@@ -27,10 +50,20 @@ export default function TenantConfigPage() {
               <span className="badge badge-active">Activo</span>
             </div>
             <div className="field-group">
-              <label className="field-label">PIN de acceso</label>
-              <input className="field-input" type="password" defaultValue="1234" />
+              <label className="field-label">PIN actual</label>
+              <input className="field-input" type="password" placeholder="••••" value={pinForm.current} onChange={e => setPinForm(p => ({ ...p, current: e.target.value }))} />
             </div>
-            <button className="btn-primary" style={{ alignSelf:'flex-start' }} onClick={() => showToast('PIN actualizado')}>Actualizar PIN</button>
+            <div className="field-group">
+              <label className="field-label">Nuevo PIN</label>
+              <input className="field-input" type="password" placeholder="Mínimo 4 dígitos" value={pinForm.next} onChange={e => setPinForm(p => ({ ...p, next: e.target.value }))} />
+            </div>
+            <div className="field-group">
+              <label className="field-label">Confirmar nuevo PIN</label>
+              <input className="field-input" type="password" placeholder="Repetir PIN" value={pinForm.confirm} onChange={e => setPinForm(p => ({ ...p, confirm: e.target.value }))} />
+            </div>
+            <button className="btn-primary" style={{ alignSelf:'flex-start' }} onClick={updatePin} disabled={pinSaving || !pinForm.current || !pinForm.next}>
+              {pinSaving ? 'Actualizando…' : 'Actualizar PIN'}
+            </button>
           </div>
         </div>
 

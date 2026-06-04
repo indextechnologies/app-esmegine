@@ -12,6 +12,7 @@ const DB = {
   promociones:    '6558132f-a2cd-4b74-b4c0-695ff0899ac6',
   instagram:      'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
   usuarios:       '21a4d81c-8f15-49ec-a291-9743ad436628',
+  contactos:      '402974b8-c2cd-4203-a623-2c1b753c68f2',
 };
 
 // ─── Tenant cache (populated lazily from Notion) ────────────────────────────
@@ -841,4 +842,111 @@ export async function updateInstagramLink(pageId: string, fields: Partial<{
 
 export async function deleteInstagramLink(pageId: string) {
   return archivePage(pageId);
+}
+
+// ─── Contactos CRM ────────────────────────────────────────────────────────────
+
+export type NotionContacto = {
+  id:          string;
+  nombre:      string;
+  email:       string;
+  telefono:    string;
+  notas:       string;
+  etiquetas:   string[];
+  totalVisitas: number;
+  ultimaVisita: string;
+  primeraVisita: string;
+};
+
+export async function getContactos(tenant: string): Promise<NotionContacto[]> {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) return [];
+  const rows = await queryDB(
+    DB.contactos,
+    { property: 'Tenant', relation: { contains: tenantId } },
+    [{ property: 'Última Visita', direction: 'descending' }],
+  );
+  return rows.map((p: any) => ({
+    id:           p.id,
+    nombre:       p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    email:        p.properties['Email']?.email ?? '',
+    telefono:     p.properties['Teléfono']?.phone_number ?? '',
+    notas:        p.properties['Notas']?.rich_text?.[0]?.plain_text ?? '',
+    etiquetas:    (p.properties['Etiquetas']?.multi_select ?? []).map((e: any) => e.name),
+    totalVisitas: p.properties['Total Visitas']?.number ?? 0,
+    ultimaVisita: p.properties['Última Visita']?.date?.start ?? '',
+    primeraVisita: p.properties['Primera Visita']?.date?.start ?? '',
+  }));
+}
+
+export async function createContacto(tenant: string, data: {
+  nombre: string; email?: string; telefono?: string;
+  notas?: string; etiquetas?: string[];
+}) {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) throw new Error('Unknown tenant');
+  return createPage(DB.contactos, {
+    'Nombre':         { title: [{ text: { content: data.nombre } }] },
+    'Email':          { email: data.email || null },
+    'Teléfono':       { phone_number: data.telefono || null },
+    'Notas':          { rich_text: [{ text: { content: data.notas ?? '' } }] },
+    'Etiquetas':      { multi_select: (data.etiquetas ?? []).map(n => ({ name: n })) },
+    'Total Visitas':  { number: 1 },
+    'Primera Visita': { date: { start: new Date().toISOString().slice(0, 10) } },
+    'Última Visita':  { date: { start: new Date().toISOString().slice(0, 10) } },
+    'Tenant':         { relation: [{ id: tenantId }] },
+  });
+}
+
+export async function updateContacto(pageId: string, fields: Partial<{
+  nombre: string; email: string; telefono: string;
+  notas: string; etiquetas: string[]; totalVisitas: number; ultimaVisita: string;
+}>) {
+  const props: Record<string, unknown> = {};
+  if (fields.nombre       !== undefined) props['Nombre']        = { title: [{ text: { content: fields.nombre } }] };
+  if (fields.email        !== undefined) props['Email']         = { email: fields.email || null };
+  if (fields.telefono     !== undefined) props['Teléfono']      = { phone_number: fields.telefono || null };
+  if (fields.notas        !== undefined) props['Notas']         = { rich_text: [{ text: { content: fields.notas } }] };
+  if (fields.etiquetas    !== undefined) props['Etiquetas']     = { multi_select: fields.etiquetas.map(n => ({ name: n })) };
+  if (fields.totalVisitas !== undefined) props['Total Visitas'] = { number: fields.totalVisitas };
+  if (fields.ultimaVisita !== undefined) props['Última Visita'] = { date: { start: fields.ultimaVisita } };
+  return patchPage(pageId, props);
+}
+
+export async function deleteContacto(pageId: string) {
+  return archivePage(pageId);
+}
+
+// ─── Tenant contact update ────────────────────────────────────────────────────
+
+export async function updateTenantContacto(tenant: string, fields: Partial<{
+  telefono: string; email: string; direccion: string; instagram: string; website: string;
+}>) {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) throw new Error('Unknown tenant');
+  const props: Record<string, unknown> = {};
+  if (fields.telefono  !== undefined) props['Teléfono']      = { phone_number: fields.telefono || null };
+  if (fields.email     !== undefined) props['Email']         = { email: fields.email || null };
+  if (fields.direccion !== undefined) props['Dirección']     = { rich_text: [{ text: { content: fields.direccion } }] };
+  if (fields.instagram !== undefined) props['Instagram']     = { rich_text: [{ text: { content: fields.instagram } }] };
+  if (fields.website   !== undefined) props['URL Website']   = { url: fields.website || null };
+  return patchPage(tenantId, props);
+}
+
+// ─── PIN update ───────────────────────────────────────────────────────────────
+
+export async function updateUserPin(tenant: string, currentPin: string, newPin: string): Promise<{ ok: boolean; error?: string }> {
+  const rows = await queryDB(DB.usuarios, {
+    and: [
+      { property: 'Usuario', rich_text: { equals: tenant } },
+      { property: 'Activo',  checkbox:  { equals: true } },
+    ],
+  });
+  const row = rows[0];
+  if (!row) return { ok: false, error: 'Usuario no encontrado' };
+  const realPin = row.properties['PIN']?.rich_text?.[0]?.plain_text ?? '';
+  if (realPin !== currentPin) return { ok: false, error: 'PIN actual incorrecto' };
+  if (newPin.length < 4) return { ok: false, error: 'El PIN debe tener al menos 4 dígitos' };
+  await patchPage(row.id, { 'PIN': { rich_text: [{ text: { content: newPin } }] } });
+  return { ok: true };
 }

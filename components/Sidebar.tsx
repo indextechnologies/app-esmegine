@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   DashIcon, ResIcon, UsersIcon, GlobeIcon, UtensilsIcon,
-  BarChartIcon, SettingsIcon, CRMIcon, ArrowLeft,
+  SettingsIcon, CRMIcon,
 } from './Icons';
 import { useClients } from '../lib/use-clients';
 
@@ -104,7 +104,6 @@ export default function Sidebar(props: Props) {
     { href: `${base}/menu`,      label: 'Menú',      icon: <UtensilsIcon size={16} />, bnIcon: <UtensilsIcon size={18} /> },
     { href: `${base}/contenido`, label: 'Contenido', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
     { href: `${base}/crm`,       label: 'Clientes',  icon: <CRMIcon size={16} />,      bnIcon: <CRMIcon size={18} /> },
-    { href: `${base}/analytics`, label: 'Stats',     icon: <BarChartIcon size={16} />, bnIcon: <BarChartIcon size={18} /> },
     { href: `${base}/config`,    label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },
   ];
 
@@ -143,10 +142,6 @@ export default function Sidebar(props: Props) {
         </nav>
 
         <div className="sb-foot">
-          <Link href="/admin" className="sb-item" style={{ fontSize: 12, marginBottom: 8 }}>
-            <span className="sb-ic"><ArrowLeft size={14} /></span>
-            Panel Admin
-          </Link>
           <button className="sb-user" onClick={logout} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
             <div className="sb-av">{name.slice(0, 2).toUpperCase()}</div>
             <div>

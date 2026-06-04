@@ -10,7 +10,6 @@ const PAGE_TITLES: Record<string, string> = {
   menu:       'Menú',
   contenido:  'Contenido',
   crm:        'Clientes',
-  analytics:  'Estadísticas',
   config:     'Configuración',
 };
 

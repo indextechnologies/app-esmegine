@@ -1,210 +1,242 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { CRM_CONTACTS, RESERVATIONS, type CRMContact } from '../../../lib/demo-data';
 import { useClient } from '../../../lib/use-clients';
-import { PlusIcon, EditIcon } from '../../../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon } from '../../../components/Icons';
+
+type Contacto = {
+  id: string; nombre: string; email: string; telefono: string;
+  notas: string; etiquetas: string[]; totalVisitas: number;
+  ultimaVisita: string; primeraVisita: string;
+};
+
+const ETIQUETA_STYLE: Record<string, { bg: string; color: string }> = {
+  VIP:      { bg: 'rgba(245,158,11,.15)', color: '#f59e0b' },
+  Frecuente:{ bg: 'rgba(16,185,129,.12)', color: '#10b981' },
+  Nuevo:    { bg: 'rgba(99,102,241,.12)', color: '#818cf8' },
+  Inactivo: { bg: 'rgba(107,114,128,.12)', color: '#6b7280' },
+};
+const ETIQUETAS_ALL = ['VIP', 'Frecuente', 'Nuevo', 'Inactivo'];
 
 export default function CRMPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { client } = useClient(tenant);
-  const base   = CRM_CONTACTS[tenant as string] ?? [];
 
-  const [contacts, setContacts] = useState<CRMContact[]>([...base]);
-  const [q, setQ]               = useState('');
-  const [selected, setSelected] = useState<CRMContact | null>(null);
-  const [modal, setModal]       = useState(false);
-  const [toast, setToast]       = useState('');
-  const [form, setForm]         = useState({ name:'', email:'', phone:'', notes:'' });
+  const [data, setData]       = useState<Contacto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ]             = useState('');
+  const [selected, setSelected] = useState<Contacto | null>(null);
+  const [modal, setModal]     = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [toast, setToast]     = useState('');
+  const [form, setForm]       = useState({ nombre: '', email: '', telefono: '', notas: '', etiquetas: [] as string[] });
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
 
-  const filtered = contacts.filter(c =>
-    !q || c.name.toLowerCase().includes(q.toLowerCase()) || c.email.toLowerCase().includes(q.toLowerCase()) || c.phone.includes(q)
-  );
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/${tenant}/contactos`);
+      setData(await res.json());
+    } catch { showToast('Error cargando contactos'); }
+    finally { setLoading(false); }
+  }, [tenant]);
 
-  function addContact() {
-    if (!form.name) return;
-    setContacts(prev => [...prev, {
-      id: Date.now(), name: form.name, email: form.email,
-      phone: form.phone, visits: 1, lastVisit: new Date().toISOString().slice(0,10),
-      totalSpent: 'Gs 0', notes: form.notes,
-    }]);
-    setModal(false);
-    setForm({ name:'', email:'', phone:'', notes:'' });
-    showToast('Contacto agregado');
+  useEffect(() => { load(); }, [load]);
+
+  async function saveContact() {
+    if (!form.nombre) return;
+    setSaving(true);
+    try {
+      if (selected) {
+        await fetch(`/api/${tenant}/contactos/${selected.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+        });
+        setData(prev => prev.map(c => c.id === selected.id ? { ...c, ...form } : c));
+        setSelected(null);
+        showToast('Contacto actualizado');
+      } else {
+        const res = await fetch(`/api/${tenant}/contactos`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+        });
+        const created = await res.json();
+        const today = new Date().toISOString().slice(0, 10);
+        setData(prev => [{ id: created.id, totalVisitas: 1, ultimaVisita: today, primeraVisita: today, ...form }, ...prev]);
+        showToast('Contacto agregado');
+      }
+    } catch { showToast('Error al guardar'); }
+    finally {
+      setSaving(false); setModal(false);
+      setForm({ nombre: '', email: '', telefono: '', notas: '', etiquetas: [] });
+    }
   }
 
-  // Get reservation history for selected contact
-  const history = selected
-    ? RESERVATIONS.filter(r => r.tenant === tenant && r.client.toLowerCase() === selected.name.toLowerCase())
-    : [];
+  async function deleteContact(id: string) {
+    if (!confirm('¿Eliminar este contacto?')) return;
+    try {
+      await fetch(`/api/${tenant}/contactos/${id}`, { method: 'DELETE' });
+      setData(prev => prev.filter(c => c.id !== id));
+      if (selected?.id === id) setSelected(null);
+      showToast('Eliminado');
+    } catch { showToast('Error al eliminar'); }
+  }
+
+  function openEdit(c: Contacto) {
+    setSelected(c);
+    setForm({ nombre: c.nombre, email: c.email, telefono: c.telefono, notas: c.notas, etiquetas: [...c.etiquetas] });
+    setModal(true);
+  }
+
+  function toggleEtiqueta(tag: string) {
+    setForm(p => ({
+      ...p,
+      etiquetas: p.etiquetas.includes(tag) ? p.etiquetas.filter(e => e !== tag) : [...p.etiquetas, tag],
+    }));
+  }
+
+  const filtered = data.filter(c =>
+    !q || c.nombre.toLowerCase().includes(q.toLowerCase()) ||
+    c.email.toLowerCase().includes(q.toLowerCase()) ||
+    c.telefono.includes(q)
+  );
+
+  const vip      = data.filter(c => c.etiquetas.includes('VIP')).length;
+  const nuevos   = data.filter(c => c.etiquetas.includes('Nuevo')).length;
+  const frecuentes = data.filter(c => c.etiquetas.includes('Frecuente')).length;
 
   return (
     <>
       <div className="pg-title">Clientes (CRM)</div>
-      <div className="pg-sub">{client?.name} · {contacts.length} contactos registrados</div>
+      <div className="pg-sub">{client?.name} · {data.length} contactos</div>
 
-      {/* Summary */}
-      <div className="stats-row" style={{ gridTemplateColumns:'repeat(3,1fr)' }}>
+      <div className="stats-row" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 16 }}>
         {[
-          { l:'Total contactos', v:contacts.length,     c:'var(--accent-1)' },
-          { l:'Clientes VIP',    v:contacts.filter(c=>c.visits>=8).length, c:'var(--yellow)' },
-          { l:'Nuevos (1 visita)', v:contacts.filter(c=>c.visits<=1).length, c:'var(--green)' },
+          { l: 'Total', v: data.length, c: 'var(--accent-1)' },
+          { l: 'VIP',   v: vip,         c: 'var(--yellow)' },
+          { l: 'Nuevos', v: nuevos,     c: 'var(--green)' },
         ].map(s => (
           <div key={s.l} className="stat-card">
-            <div className="stat-val" style={{ color:s.c }}>{s.v}</div>
+            <div className="stat-val" style={{ color: s.c }}>{s.v}</div>
             <div className="stat-lbl">{s.l}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns: selected ? '1fr 320px' : '1fr', gap:14 }}>
-        {/* Contact list */}
-        <div>
-          <div className="filters">
-            <input
-              className="field-input" style={{ width:240 }}
-              placeholder="Buscar por nombre, email o teléfono..."
-              value={q} onChange={e => setQ(e.target.value)}
-            />
-            <button className="btn-primary" style={{ marginLeft:'auto' }} onClick={() => setModal(true)}>
-              <PlusIcon size={13} /> Agregar contacto
-            </button>
-          </div>
-
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Contacto</th>
-                  <th>Visitas</th>
-                  <th>Última visita</th>
-                  <th>Total</th>
-                  <th>Notas</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="empty">Sin contactos</td></tr>
-                ) : filtered.map(c => (
-                  <tr key={c.id} style={{ cursor:'pointer' }} onClick={() => setSelected(c === selected ? null : c)}>
-                    <td>
-                      <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-                        <div style={{ width:30, height:30, borderRadius:'50%', background:'var(--bg-elevated)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'var(--accent-1)', flexShrink:0 }}>
-                          {c.name.slice(0,1).toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight:600 }}>{c.name}</div>
-                          {c.visits >= 8 && <span style={{ fontSize:9.5, background:'rgba(245,158,11,.15)', color:'var(--yellow)', padding:'1px 5px', borderRadius:4, fontWeight:700 }}>VIP</span>}
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontSize:12, color:'var(--text-2)' }}>
-                      <div>{c.email}</div>
-                      <div>{c.phone}</div>
-                    </td>
-                    <td><strong style={{ color:'var(--accent-1)' }}>{c.visits}</strong></td>
-                    <td style={{ fontSize:12, color:'var(--text-2)' }}>{c.lastVisit}</td>
-                    <td style={{ fontWeight:600, fontSize:12 }}>{c.totalSpent}</td>
-                    <td style={{ fontSize:12, color:'var(--text-3)' }}>{c.notes || '—'}</td>
-                    <td>
-                      <button className="abtn abtn-edit" onClick={e => { e.stopPropagation(); setSelected(c); }}>
-                        <EditIcon size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Contact detail panel */}
-        {selected && (
-          <div className="card" style={{ height:'fit-content', position:'sticky', top:80 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
-              <div>
-                <div style={{ width:48, height:48, borderRadius:'50%', background:'var(--accent-grad)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:'white', marginBottom:10 }}>
-                  {selected.name.slice(0,1).toUpperCase()}
-                </div>
-                <div style={{ fontFamily:'Syne', fontWeight:800, fontSize:16 }}>{selected.name}</div>
-                {selected.visits >= 8 && <span style={{ fontSize:10, background:'rgba(245,158,11,.15)', color:'var(--yellow)', padding:'2px 7px', borderRadius:20, fontWeight:700, marginTop:4, display:'inline-block' }}>★ Cliente VIP</span>}
-              </div>
-              <button className="abtn abtn-edit" onClick={() => setSelected(null)}>✕</button>
-            </div>
-
-            <div style={{ display:'flex', flexDirection:'column', gap:8, fontSize:12.5, marginBottom:16 }}>
-              {[
-                ['📧', selected.email],
-                ['📱', selected.phone],
-                ['📅', `Última visita: ${selected.lastVisit}`],
-                ['🔁', `${selected.visits} visitas totales`],
-                ['💰', selected.totalSpent],
-              ].map(([ic, v]) => (
-                <div key={ic} style={{ display:'flex', gap:8, color:'var(--text-2)' }}>
-                  <span>{ic}</span>
-                  <span>{v}</span>
-                </div>
-              ))}
-            </div>
-
-            {selected.notes && (
-              <div style={{ padding:'8px 10px', background:'var(--bg-elevated)', borderRadius:8, fontSize:12, color:'var(--text-2)', marginBottom:16 }}>
-                📋 {selected.notes}
-              </div>
-            )}
-
-            <div>
-              <div style={{ fontFamily:'Syne', fontWeight:700, fontSize:12, marginBottom:8, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:'.05em' }}>
-                Historial de reservas
-              </div>
-              {history.length === 0 ? (
-                <div style={{ fontSize:12, color:'var(--text-3)' }}>Sin registros en el sistema</div>
-              ) : history.map(r => (
-                <div key={r.id} style={{ padding:'8px 0', borderBottom:'1px solid var(--border)', fontSize:12 }}>
-                  <div style={{ fontWeight:600 }}>{r.service}</div>
-                  <div style={{ color:'var(--text-3)' }}>{r.date} · {r.time}</div>
-                  <span className={`badge badge-${r.status}`} style={{ marginTop:3, display:'inline-flex' }}>
-                    {r.status === 'confirmed' ? 'Confirmada' : r.status === 'pending' ? 'Pendiente' : 'Cancelada'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
+        <input className="field-input" style={{ flex: 1 }}
+          placeholder="Buscar por nombre, email o teléfono..."
+          value={q} onChange={e => setQ(e.target.value)} />
+        <button className="btn-primary" onClick={() => { setSelected(null); setForm({ nombre: '', email: '', telefono: '', notas: '', etiquetas: [] }); setModal(true); }}>
+          <PlusIcon size={13} /> Agregar
+        </button>
       </div>
 
-      {/* Modal add contact */}
+      {loading ? (
+        <div className="empty" style={{ padding: 48 }}>Cargando desde Notion…</div>
+      ) : filtered.length === 0 ? (
+        <div className="empty">Sin contactos{q ? ' que coincidan' : ' aún'}</div>
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="stagger" style={{ padding: '0 16px' }}>
+            {filtered.map(c => (
+              <div key={c.id} className="res-row" style={{ cursor: 'pointer' }} onClick={() => setSelected(s => s?.id === c.id ? null : c)}>
+                <div className="res-av">{c.nombre.slice(0, 2).toUpperCase()}</div>
+                <div className="res-info" style={{ flex: 1 }}>
+                  <div className="res-name" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {c.nombre}
+                    {c.etiquetas.map(tag => (
+                      <span key={tag} style={{ fontSize: 9.5, padding: '1px 6px', borderRadius: 4, fontWeight: 700, background: ETIQUETA_STYLE[tag]?.bg, color: ETIQUETA_STYLE[tag]?.color }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="res-meta">
+                    {c.email && <span>{c.email}</span>}
+                    {c.email && c.telefono && <span> · </span>}
+                    {c.telefono && <span>{c.telefono}</span>}
+                    {c.ultimaVisita && <span> · Última visita: {c.ultimaVisita}</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button className="abtn abtn-edit" onClick={e => { e.stopPropagation(); openEdit(c); }}><EditIcon size={12} /></button>
+                  <button className="abtn abtn-canc" onClick={e => { e.stopPropagation(); deleteContact(c.id); }}><TrashIcon size={12} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selected && !modal && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 16 }}>{selected.nombre}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                {selected.etiquetas.map(tag => (
+                  <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: ETIQUETA_STYLE[tag]?.bg, color: ETIQUETA_STYLE[tag]?.color }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <button className="abtn abtn-edit" onClick={() => setSelected(null)}>✕</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--text-2)' }}>
+            {selected.email    && <div>📧 {selected.email}</div>}
+            {selected.telefono && <div>📱 {selected.telefono}</div>}
+            {selected.totalVisitas > 0 && <div>🔁 {selected.totalVisitas} visita{selected.totalVisitas !== 1 ? 's' : ''}</div>}
+            {selected.ultimaVisita && <div>📅 Última visita: {selected.ultimaVisita}</div>}
+            {selected.primeraVisita && <div>📌 Primera visita: {selected.primeraVisita}</div>}
+            {selected.notas && (
+              <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--bg-elevated)', borderRadius: 8, fontSize: 12 }}>
+                📋 {selected.notas}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={`modal-ov ${modal ? 'open' : ''}`} onClick={e => e.target === e.currentTarget && setModal(false)}>
         <div className="modal">
           <div className="modal-hd">
-            <div className="modal-title">Nuevo Contacto</div>
+            <div className="modal-title">{selected ? 'Editar contacto' : 'Nuevo contacto'}</div>
             <button className="modal-x" onClick={() => setModal(false)}>✕</button>
           </div>
           <div className="m-row">
             <div className="field-group">
-              <label className="field-label">Nombre</label>
-              <input className="field-input" placeholder="Nombre completo" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
+              <label className="field-label">Nombre *</label>
+              <input className="field-input" placeholder="Nombre completo" value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))} />
             </div>
             <div className="field-group">
               <label className="field-label">Teléfono</label>
-              <input className="field-input" placeholder="09XX XXX XXX" value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} />
+              <input className="field-input" placeholder="09XX XXX XXX" value={form.telefono} onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))} />
             </div>
           </div>
           <div className="field-group">
             <label className="field-label">Email</label>
-            <input className="field-input" type="email" placeholder="email@..." value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} />
+            <input className="field-input" type="email" placeholder="email@..." value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Etiquetas</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }}>
+              {ETIQUETAS_ALL.map(tag => (
+                <button key={tag} onClick={() => toggleEtiqueta(tag)}
+                  style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${form.etiquetas.includes(tag) ? ETIQUETA_STYLE[tag]?.color : 'var(--border)'}`, background: form.etiquetas.includes(tag) ? ETIQUETA_STYLE[tag]?.bg : 'transparent', color: form.etiquetas.includes(tag) ? ETIQUETA_STYLE[tag]?.color : 'var(--text-3)', transition: 'all .15s' }}>
+                  {tag}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="field-group">
             <label className="field-label">Notas</label>
-            <input className="field-input" placeholder="Preferencias, alergias, notas..." value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
+            <textarea className="field-input" placeholder="Preferencias, alergias, notas..." value={form.notas} onChange={e => setForm(p => ({ ...p, notas: e.target.value }))} rows={2} style={{ resize: 'none' }} />
           </div>
           <div className="modal-foot">
             <button className="btn-sec" onClick={() => setModal(false)}>Cancelar</button>
-            <button className="btn-primary" onClick={addContact}>Agregar</button>
+            <button className="btn-primary" onClick={saveContact} disabled={saving || !form.nombre}>
+              {saving ? 'Guardando…' : selected ? 'Guardar cambios' : 'Agregar contacto'}
+            </button>
           </div>
         </div>
       </div>

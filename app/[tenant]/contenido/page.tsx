@@ -4,6 +4,65 @@ import { useParams } from 'next/navigation';
 import { useClient } from '../../../lib/use-clients';
 import { PlusIcon, EditIcon, TrashIcon, ExternalIcon, ClockIcon, MessageIcon, ImageIcon, TagIcon, FileTextIcon, CameraIcon } from '../../../components/Icons';
 
+type Client = import('../../../lib/use-clients').Client;
+
+function ContactoTab({ tenant, client }: { tenant: string; client: Client | null }) {
+  const [form, setForm] = useState({
+    telefono:  client?.phone    ?? '',
+    email:     client?.email    ?? '',
+    direccion: client?.address  ?? '',
+    instagram: client?.instagram ?? '',
+    website:   client?.website  ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast]   = useState('');
+
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/${tenant}/contacto`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Guardado correctamente');
+    } catch { showToast('Error al guardar'); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="card" style={{ maxWidth: 560 }}>
+      <div className="card-hd"><div className="card-title">Información de contacto</div></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div className="field-group">
+          <label className="field-label">Nombre del negocio</label>
+          <input className="field-input" value={client?.name ?? ''} readOnly style={{ opacity: 0.6, cursor: 'default' }} />
+        </div>
+        {([
+          { label: 'Teléfono / WhatsApp', key: 'telefono'  as const },
+          { label: 'Email',               key: 'email'     as const },
+          { label: 'Dirección',           key: 'direccion' as const },
+          { label: 'Instagram',           key: 'instagram' as const },
+          { label: 'URL Website',         key: 'website'   as const },
+        ]).map(f => (
+          <div key={f.key} className="field-group">
+            <label className="field-label">{f.label}</label>
+            <input className="field-input" value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
+          </div>
+        ))}
+        <button className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: 8 }} onClick={save} disabled={saving}>
+          {saving ? 'Guardando…' : 'Guardar cambios'}
+        </button>
+      </div>
+      <div className={`toast ${toast ? 'show' : ''}`}>
+        <div className="toast-ic">✓</div>
+        {toast}
+      </div>
+    </div>
+  );
+}
+
 type Horario     = { id: string; dia: string; horaApertura: string; horaCierre: string; cerrado: boolean; nota: string; orden: number; };
 type GaleriaItem = { id: string; titulo: string; urlImagen: string; altText: string; seccion: string; activo: boolean; orden: number; };
 type Testimonio  = { id: string; nombre: string; testimonio: string; calificacion: number; contexto: string; plataforma: string; activo: boolean; };
@@ -501,25 +560,7 @@ export default function ContenidoPage() {
 
           {/* ── CONTACTO ──────────────────────────────────────────────────── */}
           {tab === 'contacto' && (
-            <div className="card" style={{ maxWidth: 560 }}>
-              <div className="card-hd"><div className="card-title">Información de contacto</div></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {([
-                  { label: 'Nombre del negocio', val: client?.name ?? '' },
-                  { label: 'Teléfono / WhatsApp', val: client?.phone ?? '' },
-                  { label: 'Email',               val: client?.email ?? '' },
-                  { label: 'Dirección',           val: client?.address ?? '' },
-                  { label: 'Instagram',           val: client?.instagram ?? '' },
-                ]).map(f => (
-                  <div key={f.label} className="field-group">
-                    <label className="field-label">{f.label}</label>
-                    <input className="field-input" defaultValue={f.val} />
-                  </div>
-                ))}
-                <button className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: 8 }}
-                  onClick={() => showToast('Próximamente: edición de contacto desde Notion')}>Guardar cambios</button>
-              </div>
-            </div>
+            <ContactoTab tenant={tenant} client={client} />
           )}
         </>
       )}

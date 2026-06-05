@@ -933,7 +933,21 @@ export async function deleteContacto(pageId: string) {
   return archivePage(pageId);
 }
 
-// ─── Tenant contact update ────────────────────────────────────────────────────
+// ─── Tenant contact read / update ────────────────────────────────────────────
+
+export async function getTenantContacto(tenant: string) {
+  const rows = await queryDB(DB.tenants, { property: 'Slug', rich_text: { equals: tenant } }, []);
+  if (!rows.length) return null;
+  const p = rows[0];
+  return {
+    nombre:    p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+    telefono:  p.properties['Teléfono']?.phone_number ?? '',
+    email:     p.properties['Email']?.email ?? '',
+    direccion: p.properties['Dirección']?.rich_text?.[0]?.plain_text ?? '',
+    instagram: p.properties['Instagram']?.rich_text?.[0]?.plain_text ?? '',
+    website:   p.properties['URL Website']?.url ?? '',
+  };
+}
 
 export async function updateTenantContacto(tenant: string, fields: Partial<{
   telefono: string; email: string; direccion: string; instagram: string; website: string;

@@ -37,7 +37,7 @@ export default function Sidebar(props: Props) {
             <div className="sb-logo-row">
               <div className="sb-gem">E</div>
               <div>
-                <div className="sb-name">esmegine</div>
+                <div className="sb-name">Index</div>
                 <div className="sb-sub">Index Technologies</div>
               </div>
             </div>
@@ -100,7 +100,6 @@ export default function Sidebar(props: Props) {
     { href: `${base}/reservas`,  label: 'Reservas',  icon: <ResIcon size={16} />,      bnIcon: <ResIcon size={18} /> },
     { href: `${base}/menu`,      label: 'Menú',      icon: <UtensilsIcon size={16} />, bnIcon: <UtensilsIcon size={18} /> },
     { href: `${base}/contenido`, label: 'Contenido', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
-    { href: `${base}/crm`,       label: 'Clientes',  icon: <CRMIcon size={16} />,      bnIcon: <CRMIcon size={18} /> },
     { href: `${base}/config`,    label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },
   ];
 
@@ -113,7 +112,7 @@ export default function Sidebar(props: Props) {
           <div className="sb-logo-row">
             <div className="sb-gem">E</div>
             <div>
-              <div className="sb-name">esmegine</div>
+              <div className="sb-name">Index</div>
               <div className="sb-sub">by Index Technologies</div>
             </div>
           </div>

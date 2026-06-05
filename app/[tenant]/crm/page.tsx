@@ -132,7 +132,7 @@ export default function CRMPage() {
       </div>
 
       {loading ? (
-        <div className="empty" style={{ padding: 48 }}>Cargando desde Notion…</div>
+        <div className="empty" style={{ padding: 48 }}>Cargando…</div>
       ) : filtered.length === 0 ? (
         <div className="empty">Sin contactos{q ? ' que coincidan' : ' aún'}</div>
       ) : (

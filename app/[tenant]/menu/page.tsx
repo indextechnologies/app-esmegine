@@ -322,7 +322,7 @@ export default function MenuPage() {
       </div>
 
       {loading ? (
-        <div className="empty" style={{ padding: 48 }}>Cargando desde Notion…</div>
+        <div className="empty" style={{ padding: 48 }}>Cargando…</div>
       ) : (
         <>
           {/* ── MENÚ TAB ──────────────────────────────────────────────────── */}

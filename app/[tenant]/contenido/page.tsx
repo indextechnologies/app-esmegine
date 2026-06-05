@@ -353,7 +353,7 @@ export default function ContenidoPage() {
       </div>
 
       {loadingTab && tab !== 'contacto' ? (
-        <div className="empty" style={{ padding: 48 }}>Cargando desde Notion…</div>
+        <div className="empty" style={{ padding: 48 }}>Cargando…</div>
       ) : (
         <>
           {/* ── HORARIOS ──────────────────────────────────────────────────── */}

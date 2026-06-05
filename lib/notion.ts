@@ -308,7 +308,7 @@ export async function getMenuItems(tenant: string): Promise<NotionMenuItem[]> {
     orden:          p.properties['Orden']?.number ?? 0,
     activo:         p.properties['Activo']?.checkbox ?? false,
     destacado:      p.properties['Destacado']?.checkbox ?? false,
-    platoDelDia:    p.properties['Plato del Día']?.checkbox ?? false,
+    platoDelDia:    (p.properties['Plato del Día']?.checkbox ?? false) || (p.properties['Destacado']?.checkbox ?? false),
     categoriaId:    p.properties['Categoría']?.relation?.[0]?.id ?? null,
     subcategoriaId: p.properties['Subcategoria']?.relation?.[0]?.id ?? null,
     imagenUrl:      notionFileUrl(p.properties['Foto']) ?? p.properties['Imagen URL']?.url ?? null,

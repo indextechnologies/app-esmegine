@@ -62,6 +62,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         name={client.name}
         industry={client.industry}
         emoji={client.emoji}
+        logoUrl={client.website ? client.website.replace(/\/$/, '') + '/img/' + client.slug + '-logo.png' : undefined}
       />
       <div className="main-area">
         <header className="top-bar">

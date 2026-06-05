@@ -9,7 +9,7 @@ import { useClients } from '../lib/use-clients';
 
 type Props =
   | { mode: 'admin' }
-  | { mode: 'tenant'; slug: string; name: string; industry: string; emoji: string };
+  | { mode: 'tenant'; slug: string; name: string; industry: string; emoji: string; logoUrl?: string };
 
 export default function Sidebar(props: Props) {
   const path = usePathname();
@@ -35,11 +35,8 @@ export default function Sidebar(props: Props) {
         <aside className="sidebar">
           <div className="sb-logo">
             <div className="sb-logo-row">
-              <div className="sb-gem">E</div>
-              <div>
-                <div className="sb-name">Index</div>
-                <div className="sb-sub">Index Technologies</div>
-              </div>
+              <img src="/icon-index-transparent.png" alt="Index" style={{height:34,width:34,objectFit:'contain',flexShrink:0}} />
+              <div className="sb-name">Index</div>
             </div>
           </div>
 
@@ -110,15 +107,15 @@ export default function Sidebar(props: Props) {
       <aside className="sidebar">
         <div className="sb-logo">
           <div className="sb-logo-row">
-            <div className="sb-gem">E</div>
-            <div>
-              <div className="sb-name">Index</div>
-              <div className="sb-sub">by Index Technologies</div>
-            </div>
+            <img src="/icon-index-transparent.png" alt="Index" style={{height:34,width:34,objectFit:'contain',flexShrink:0}} />
+            <div className="sb-name">Index</div>
           </div>
         </div>
 
         <div className="sb-client-badge">
+          {props.logoUrl && (
+            <img src={props.logoUrl} alt={name} style={{height:30,width:'auto',maxWidth:'100%',objectFit:'contain',marginBottom:6,display:'block'}} onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+          )}
           <div className="sb-client-name">{name}</div>
           <div className="sb-client-type">{industry}</div>
         </div>

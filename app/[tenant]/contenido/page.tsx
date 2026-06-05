@@ -67,7 +67,7 @@ type Horario     = { id: string; dia: string; horaApertura: string; horaCierre: 
 type GaleriaItem = { id: string; titulo: string; urlImagen: string; altText: string; seccion: string; activo: boolean; orden: number; };
 type Testimonio  = { id: string; nombre: string; testimonio: string; calificacion: number; contexto: string; plataforma: string; activo: boolean; };
 type Promocion   = { id: string; titulo: string; descripcion: string; descuento: number; tipo: string; imagenUrl: string; fechaInicio: string; fechaFin: string; activo: boolean; };
-type IgLink      = { id: string; titulo: string; urlPost: string; activo: boolean; orden: number; tipo: string; };
+type IgLink      = { id: string; titulo: string; urlPost: string; imagenUrl: string; activo: boolean; orden: number; tipo: string; };
 
 type Tab = 'horarios' | 'testimonios' | 'galeria' | 'promociones' | 'contacto' | 'instagram';
 
@@ -97,7 +97,7 @@ export default function ContenidoPage() {
 
   // Instagram modal
   const [igModal, setIgModal] = useState(false);
-  const [igForm, setIgForm]   = useState({ titulo: '', urlPost: '', tipo: 'Post' });
+  const [igForm, setIgForm]   = useState({ titulo: '', urlPost: '', imagenUrl: '', tipo: 'Post' });
 
   // Promocion modal
   const [promoModal, setPromoModal]   = useState(false);
@@ -294,13 +294,13 @@ export default function ContenidoPage() {
     if (!igForm.urlPost) return;
     setSaving('ig-new');
     try {
-      const body = { titulo: igForm.titulo || igForm.urlPost, urlPost: igForm.urlPost, tipo: igForm.tipo, orden: igLinks.length };
+      const body = { titulo: igForm.titulo || igForm.urlPost, urlPost: igForm.urlPost, imagenUrl: igForm.imagenUrl, tipo: igForm.tipo, orden: igLinks.length };
       const res = await fetch(`/api/${tenant}/instagram`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const created = await res.json();
       setIgLinks(prev => [...prev, { id: created.id, activo: true, ...body }]);
       showToast('Post agregado');
     } catch { showToast('Error'); }
-    finally { setSaving(null); setIgModal(false); setIgForm({ titulo: '', urlPost: '', tipo: 'Post' }); }
+    finally { setSaving(null); setIgModal(false); setIgForm({ titulo: '', urlPost: '', imagenUrl: '', tipo: 'Post' }); }
   }
 
   async function deleteIg(id: string) {
@@ -532,8 +532,10 @@ export default function ContenidoPage() {
                   {igLinks.map(link => (
                     <div key={link.id} className="card" style={{ opacity: saving === 'ig-' + link.id ? 0.6 : 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                          📸
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {link.imagenUrl
+                            ? <img src={link.imagenUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            : <span style={{ fontSize: 20 }}>📸</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -708,12 +710,18 @@ export default function ContenidoPage() {
             <button className="modal-x" onClick={() => setIgModal(false)}>✕</button>
           </div>
           <div className="field-group">
-            <label className="field-label">URL del post</label>
+            <label className="field-label">URL de imagen <span style={{ color: 'var(--red)', fontSize: 10 }}>*requerida para el carrusel</span></label>
+            <input className="field-input" placeholder="https://..." value={igForm.imagenUrl}
+              onChange={e => setIgForm(p => ({ ...p, imagenUrl: e.target.value }))} />
+            {igForm.imagenUrl && (
+              <img src={igForm.imagenUrl} alt="" onError={e => (e.currentTarget.style.display='none')}
+                style={{ marginTop: 8, width: '100%', height: 100, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+            )}
+          </div>
+          <div className="field-group">
+            <label className="field-label">URL del post (link al hacer clic)</label>
             <input className="field-input" placeholder="https://www.instagram.com/p/..." value={igForm.urlPost}
               onChange={e => setIgForm(p => ({ ...p, urlPost: e.target.value }))} />
-            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
-              Copiá el link del post desde Instagram (ej: instagram.com/p/ABC123/)
-            </div>
           </div>
           <div className="m-row">
             <div className="field-group">

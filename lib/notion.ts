@@ -806,6 +806,7 @@ export type NotionInstagramLink = {
   id: string;
   titulo: string;
   urlPost: string;
+  imagenUrl: string;
   activo: boolean;
   orden: number;
   tipo: string;
@@ -820,23 +821,25 @@ export async function getInstagramLinks(tenant: string): Promise<NotionInstagram
     [{ property: 'Orden', direction: 'ascending' }],
   );
   return rows.map((p: any) => ({
-    id:      p.id,
-    titulo:  p.properties['Descripción']?.title?.[0]?.plain_text ?? '',
-    urlPost: p.properties['Enlace']?.url ?? '',
-    activo:  p.properties['Activo']?.checkbox ?? false,
-    orden:   p.properties['Orden']?.number ?? 0,
-    tipo:    p.properties['Tipo']?.select?.name ?? 'Post',
+    id:        p.id,
+    titulo:    p.properties['Descripción']?.title?.[0]?.plain_text ?? '',
+    urlPost:   p.properties['Enlace']?.url ?? '',
+    imagenUrl: notionFileUrl(p.properties['Foto']) ?? p.properties['Imagen URL']?.url ?? '',
+    activo:    p.properties['Activo']?.checkbox ?? false,
+    orden:     p.properties['Orden']?.number ?? 0,
+    tipo:      p.properties['Tipo']?.select?.name ?? 'Post',
   }));
 }
 
 export async function createInstagramLink(tenant: string, data: {
-  titulo: string; urlPost: string; orden?: number; tipo?: string;
+  titulo: string; urlPost: string; imagenUrl?: string; orden?: number; tipo?: string;
 }) {
   const tenantId = await getTenantPageId(tenant);
   if (!tenantId) throw new Error('Unknown tenant');
   return createPage(DB.instagram, {
     'Descripción': { title: [{ text: { content: data.titulo } }] },
     'Enlace':      { url: data.urlPost || null },
+    'Imagen URL':  { url: data.imagenUrl || null },
     'Activo':      { checkbox: true },
     'Orden':       { number: data.orden ?? 0 },
     'Tipo':        { select: { name: data.tipo ?? 'Post' } },
@@ -845,14 +848,15 @@ export async function createInstagramLink(tenant: string, data: {
 }
 
 export async function updateInstagramLink(pageId: string, fields: Partial<{
-  titulo: string; urlPost: string; activo: boolean; orden: number; tipo: string;
+  titulo: string; urlPost: string; imagenUrl: string; activo: boolean; orden: number; tipo: string;
 }>) {
   const props: Record<string, unknown> = {};
-  if (fields.titulo  !== undefined) props['Descripción'] = { title: [{ text: { content: fields.titulo } }] };
-  if (fields.urlPost !== undefined) props['Enlace']      = { url: fields.urlPost || null };
-  if (fields.activo  !== undefined) props['Activo']      = { checkbox: fields.activo };
-  if (fields.orden   !== undefined) props['Orden']       = { number: fields.orden };
-  if (fields.tipo    !== undefined) props['Tipo']        = { select: { name: fields.tipo } };
+  if (fields.titulo     !== undefined) props['Descripción'] = { title: [{ text: { content: fields.titulo } }] };
+  if (fields.urlPost    !== undefined) props['Enlace']      = { url: fields.urlPost || null };
+  if (fields.imagenUrl  !== undefined) props['Imagen URL']  = { url: fields.imagenUrl || null };
+  if (fields.activo     !== undefined) props['Activo']      = { checkbox: fields.activo };
+  if (fields.orden      !== undefined) props['Orden']       = { number: fields.orden };
+  if (fields.tipo       !== undefined) props['Tipo']        = { select: { name: fields.tipo } };
   return patchPage(pageId, props);
 }
 

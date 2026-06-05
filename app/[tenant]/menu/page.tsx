@@ -447,9 +447,7 @@ export default function MenuPage() {
 
           {/* ── MENÚ DEL DÍA ─────────────────────────────────────────────── */}
           {tab === 'daily' && (() => {
-            const almuerzosCat = categories.find(c => c.nombre.toLowerCase().includes('almuerzo'));
-            const almuerzosSubs = almuerzosCat ? subcategories.filter(s => s.categoriaId === almuerzosCat.id) : [];
-            const almuerzosItems = almuerzosCat ? items.filter(i => i.categoriaId === almuerzosCat.id && i.activo) : [];
+            const activeItems = items.filter(i => i.activo);
 
             const renderToggleRow = (item: MenuItem) => (
               <div key={item.id}
@@ -479,7 +477,7 @@ export default function MenuPage() {
                     </div>
                   </div>
                   {daily.length === 0 ? (
-                    <div style={{ fontSize: 13, color: 'var(--text-3)', paddingTop: 4 }}>Ningún plato seleccionado — hacé clic en un item de la lista de abajo para marcarlo</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-3)', paddingTop: 4 }}>Ningún plato seleccionado — hacé clic en cualquier item de abajo para marcarlo como del día</div>
                   ) : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 8 }}>
                       {daily.map(item => (
@@ -492,28 +490,35 @@ export default function MenuPage() {
                   )}
                 </div>
 
-                {/* Lista solo de Almuerzos */}
-                {!almuerzosCat ? (
-                  <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No se encontró la categoría Almuerzos.</div>
+                {/* Items por categoría para toggle */}
+                {activeItems.length === 0 ? (
+                  <div className="empty">Sin items en el menú — agregá platos desde la pestaña Menú para poder seleccionarlos como del día</div>
                 ) : (
-                  <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13 }}>{almuerzosCat.icono} {almuerzosCat.nombre}</span>
-                    </div>
-                    {almuerzosSubs.map(sub => {
-                      const subItems = almuerzosItems.filter(i => i.subcategoriaId === sub.id);
-                      if (!subItems.length) return null;
-                      return (
-                        <div key={sub.id}>
-                          <div style={{ padding: '6px 16px 6px 24px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
-                            <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>↳ {sub.nombre}</span>
-                          </div>
-                          {subItems.map(renderToggleRow)}
+                  categories.map(cat => {
+                    const catItems = activeItems.filter(i => i.categoriaId === cat.id);
+                    if (!catItems.length) return null;
+                    const catSubs = subcategories.filter(s => s.categoriaId === cat.id);
+                    return (
+                      <div key={cat.id} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
+                        <div style={{ padding: '10px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
+                          <span style={{ fontFamily: 'Syne', fontWeight: 700, fontSize: 13 }}>{cat.icono} {cat.nombre}</span>
                         </div>
-                      );
-                    })}
-                    {almuerzosItems.filter(i => !i.subcategoriaId).map(renderToggleRow)}
-                  </div>
+                        {catSubs.map(sub => {
+                          const subItems = catItems.filter(i => i.subcategoriaId === sub.id);
+                          if (!subItems.length) return null;
+                          return (
+                            <div key={sub.id}>
+                              <div style={{ padding: '6px 16px 6px 24px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
+                                <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>↳ {sub.nombre}</span>
+                              </div>
+                              {subItems.map(renderToggleRow)}
+                            </div>
+                          );
+                        })}
+                        {catItems.filter(i => !i.subcategoriaId).map(renderToggleRow)}
+                      </div>
+                    );
+                  })
                 )}
               </>
             );

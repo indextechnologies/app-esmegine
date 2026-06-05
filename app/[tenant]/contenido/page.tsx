@@ -71,6 +71,16 @@ type IgLink      = { id: string; titulo: string; urlPost: string; imagenUrl: str
 
 type Tab = 'horarios' | 'testimonios' | 'galeria' | 'promociones' | 'contacto' | 'instagram';
 
+const DIAS_BASE = [
+  { dia: 'Lunes',     orden: 1 },
+  { dia: 'Martes',    orden: 2 },
+  { dia: 'Miércoles', orden: 3 },
+  { dia: 'Jueves',    orden: 4 },
+  { dia: 'Viernes',   orden: 5 },
+  { dia: 'Sábado',    orden: 6 },
+  { dia: 'Domingo',   orden: 7 },
+];
+
 export default function ContenidoPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { client } = useClient(tenant);
@@ -114,7 +124,22 @@ export default function ContenidoPage() {
     if (loaded[tab]) return;
     const markLoaded = () => setLoaded(l => ({ ...l, [tab]: true }));
     if (tab === 'horarios') {
-      fetch(`/api/${tenant}/horarios`).then(r => r.json()).then(setHorarios).catch(() => {}).finally(markLoaded);
+      fetch(`/api/${tenant}/horarios`).then(r => r.json()).then(async (rows: Horario[]) => {
+        const seen = new Set<string>();
+        const deduped = rows.filter(h => { if (seen.has(h.dia)) return false; seen.add(h.dia); return true; });
+        const existing = new Set(deduped.map(h => h.dia));
+        const toCreate = DIAS_BASE.filter(d => !existing.has(d.dia));
+        const created: Horario[] = [];
+        for (const d of toCreate) {
+          try {
+            const res = await fetch(`/api/${tenant}/horarios`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dia: d.dia, horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: d.orden }) });
+            const row = await res.json();
+            created.push({ id: row.id, dia: d.dia, horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: d.orden });
+          } catch { /* skip */ }
+        }
+        const all = [...deduped, ...created];
+        setHorarios(DIAS_BASE.map(d => all.find(h => h.dia === d.dia)!).filter(Boolean));
+      }).catch(() => {}).finally(markLoaded);
     } else if (tab === 'galeria') {
       fetch(`/api/${tenant}/galeria`).then(r => r.json()).then(setGaleria).catch(() => {}).finally(markLoaded);
     } else if (tab === 'testimonios') {
@@ -264,30 +289,6 @@ export default function ContenidoPage() {
     finally { setSaving(null); }
   }
 
-  async function createHorarioBase() {
-    setSaving('hor-base');
-    const days = [
-      { dia: 'Lunes',     horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 1 },
-      { dia: 'Martes',    horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 2 },
-      { dia: 'Miércoles', horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 3 },
-      { dia: 'Jueves',    horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 4 },
-      { dia: 'Viernes',   horaApertura: '07:00', horaCierre: '21:00', cerrado: false, nota: '', orden: 5 },
-      { dia: 'Sábado',    horaApertura: '08:00', horaCierre: '22:00', cerrado: false, nota: '', orden: 6 },
-      { dia: 'Domingo',   horaApertura: '08:00', horaCierre: '18:00', cerrado: false, nota: '', orden: 7 },
-    ];
-    try {
-      const created = [];
-      for (const d of days) {
-        const res = await fetch(`/api/${tenant}/horarios`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
-        const row = await res.json();
-        created.push({ id: row.id, ...d });
-      }
-      setHorarios(created);
-      showToast('Horarios base creados');
-    } catch { showToast('Error creando horarios'); }
-    finally { setSaving(null); }
-  }
-
   // ─── Instagram actions ────────────────────────────────────────────────────────
 
   async function saveIg() {
@@ -361,20 +362,15 @@ export default function ContenidoPage() {
             <div className="card" style={{ maxWidth: 560 }}>
               <div className="card-hd">
                 <div className="card-title">Horarios de atención</div>
-                {horarios.length === 0 && saving !== 'hor-base' && (
-                  <button className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }} onClick={createHorarioBase}>
-                    + Crear horarios base
-                  </button>
-                )}
-                {saving === 'hor-base' && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Creando…</span>}
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Los cambios se guardan al salir del campo</span>
               </div>
-              {horarios.length === 0 && saving !== 'hor-base' ? (
-                <div className="empty">Sin horarios. Hacé clic en "Crear horarios base" para comenzar.</div>
+              {horarios.length === 0 ? (
+                <div className="empty" style={{ padding: 24 }}>Cargando días…</div>
               ) : (
                 horarios.map(h => (
                   <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)', opacity: saving === 'hor-' + h.id ? 0.6 : 1 }}>
-                    <div style={{ minWidth: 100, fontWeight: 600, fontSize: 13 }}>{h.dia}</div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+                    <div style={{ minWidth: 96, fontWeight: 600, fontSize: 13 }}>{h.dia}</div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
                       <input type="checkbox" checked={h.cerrado}
                         onChange={e => patchHorario(h.id, { cerrado: e.target.checked })}
                         style={{ accentColor: 'var(--red)' }} />
@@ -382,16 +378,15 @@ export default function ContenidoPage() {
                     </label>
                     {!h.cerrado && (
                       <>
-                        <input type="time" className="field-input" style={{ width: 100 }} value={h.horaApertura}
+                        <input type="time" className="field-input" style={{ width: 96 }} value={h.horaApertura}
                           onChange={e => setHorarios(prev => prev.map(x => x.id === h.id ? { ...x, horaApertura: e.target.value } : x))}
                           onBlur={e => patchHorario(h.id, { horaApertura: e.target.value })} />
-                        <span style={{ color: 'var(--text-3)' }}>→</span>
-                        <input type="time" className="field-input" style={{ width: 100 }} value={h.horaCierre}
+                        <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>→</span>
+                        <input type="time" className="field-input" style={{ width: 96 }} value={h.horaCierre}
                           onChange={e => setHorarios(prev => prev.map(x => x.id === h.id ? { ...x, horaCierre: e.target.value } : x))}
                           onBlur={e => patchHorario(h.id, { horaCierre: e.target.value })} />
                       </>
                     )}
-                    {h.nota && <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>{h.nota}</span>}
                   </div>
                 ))
               )}

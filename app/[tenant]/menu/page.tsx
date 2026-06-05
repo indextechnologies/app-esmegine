@@ -259,13 +259,13 @@ export default function MenuPage() {
     finally { setSaving(null); setSubCatModal(false); setEditSubCat(null); setSubCatForm({ nombre: '', icono: '', categoriaId: '' }); }
   }
 
-  const daily       = items.filter(i => i.destacado);
+  const daily       = items.filter(i => i.platoDelDia);
   const activeCount = items.filter(i => i.activo).length;
 
   // Inline helper for item rows (reused inside category and subcategory groups)
   function renderItemRow(item: MenuItem, imgMode: boolean) {
     return (
-      <div key={item.id} className="menu-item-row" style={{ opacity: saving === item.id ? 0.6 : 1, background: item.destacado ? 'rgba(245,158,11,.04)' : undefined }}>
+      <div key={item.id} className="menu-item-row" style={{ opacity: saving === item.id ? 0.6 : 1, background: item.platoDelDia ? 'rgba(245,158,11,.04)' : undefined }}>
         {imgMode && (
           <div style={{ width: 44, height: 44, borderRadius: 8, overflow: 'hidden', background: 'var(--bg-elevated)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {item.imagenUrl ? <img src={item.imagenUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 11, color: 'var(--text-3)' }}>sin img</span>}
@@ -274,16 +274,16 @@ export default function MenuPage() {
         <div className="mitem-info">
           <div className="mitem-name">
             {item.nombre}
-            {item.destacado && <span style={{ marginLeft: 6, fontSize: 9.5, background: 'rgba(245,158,11,.15)', color: 'var(--yellow)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>★ Del Día</span>}
+            {item.platoDelDia && <span style={{ marginLeft: 6, fontSize: 9.5, background: 'rgba(245,158,11,.15)', color: 'var(--yellow)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>★ Del Día</span>}
             {imgMode && !item.imagenUrl && <span style={{ marginLeft: 4, fontSize: 9.5, background: 'rgba(239,68,68,.12)', color: 'var(--red)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>sin foto</span>}
           </div>
           <div className="mitem-cat">{item.descripcion}</div>
         </div>
         <div className="mitem-price">Gs {item.precio.toLocaleString('es-PY')}</div>
         <button
-          title={item.destacado ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
-          onClick={() => patchItem(item.id, { destacado: !item.destacado })}
-          style={{ background: item.destacado ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.destacado ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 8px', fontSize: 13, cursor: 'pointer', color: item.destacado ? '#f59e0b' : 'var(--text-3)', transition: 'all .15s' }}>
+          title={item.platoDelDia ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
+          onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}
+          style={{ background: item.platoDelDia ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.platoDelDia ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 8px', fontSize: 13, cursor: 'pointer', color: item.platoDelDia ? '#f59e0b' : 'var(--text-3)', transition: 'all .15s' }}>
           ★
         </button>
         <span className={`badge badge-${item.activo ? 'confirmed' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => patchItem(item.id, { activo: !item.activo })}>
@@ -451,17 +451,17 @@ export default function MenuPage() {
 
             const renderToggleRow = (item: MenuItem) => (
               <div key={item.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: '1px solid var(--border)', background: item.destacado ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer', transition: 'background .15s' }}
-                onClick={() => patchItem(item.id, { destacado: !item.destacado })}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${item.destacado ? '#f59e0b' : 'var(--border)'}`, background: item.destacado ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, color: '#fff', fontWeight: 700, transition: 'all .15s' }}>
-                  {item.destacado && '★'}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: '1px solid var(--border)', background: item.platoDelDia ? 'rgba(245,158,11,.06)' : 'transparent', opacity: saving === item.id ? 0.6 : 1, cursor: 'pointer', transition: 'background .15s' }}
+                onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${item.platoDelDia ? '#f59e0b' : 'var(--border)'}`, background: item.platoDelDia ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, color: '#fff', fontWeight: 700, transition: 'all .15s' }}>
+                  {item.platoDelDia && '★'}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{item.descripcion}</div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>Gs {item.precio.toLocaleString('es-PY')}</div>
-                {item.destacado && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700, whiteSpace: 'nowrap' }}>★ Del Día</span>}
+                {item.platoDelDia && <span style={{ fontSize: 10, background: 'rgba(245,158,11,.2)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20, fontWeight: 700, whiteSpace: 'nowrap' }}>★ Del Día</span>}
               </div>
             );
 
@@ -483,7 +483,7 @@ export default function MenuPage() {
                       {daily.map(item => (
                         <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 8, padding: '6px 12px' }}>
                           <span style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</span>
-                          <button onClick={e => { e.stopPropagation(); patchItem(item.id, { destacado: false }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
+                          <button onClick={e => { e.stopPropagation(); patchItem(item.id, { platoDelDia: false }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
                         </div>
                       ))}
                     </div>

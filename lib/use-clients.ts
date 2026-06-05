@@ -24,12 +24,21 @@ let _cache: Client[] | null = null;
 let _promise: Promise<Client[]> | null = null;
 
 function fetchClients(): Promise<Client[]> {
-  if (!_promise) {
-    _promise = fetch('/api/clients')
-      .then(r => r.json())
-      .then((data: Client[]) => { _cache = data; return data; })
-      .catch(() => { _promise = null; return []; });
-  }
+  if (_promise) return _promise;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  _promise = fetch('/api/clients', { signal: controller.signal })
+    .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
+    .then((data: Client[]) => {
+      clearTimeout(timeout);
+      if (Array.isArray(data) && data.length > 0) _cache = data;
+      return Array.isArray(data) ? data : [];
+    })
+    .catch(() => {
+      clearTimeout(timeout);
+      _promise = null;
+      return [];
+    });
   return _promise;
 }
 
@@ -38,10 +47,18 @@ export function useClients() {
   const [loading, setLoading] = useState(_cache === null);
 
   useEffect(() => {
-    if (_cache !== null) return;
+    if (_cache !== null) { setClients(_cache); setLoading(false); return; }
     fetchClients().then(data => {
       setClients(data);
       setLoading(false);
+      if (data.length === 0) {
+        // Retry once after 3s in case of transient Notion error
+        setTimeout(() => {
+          fetchClients().then(retry => {
+            if (retry.length > 0) setClients(retry);
+          });
+        }, 3000);
+      }
     });
   }, []);
 

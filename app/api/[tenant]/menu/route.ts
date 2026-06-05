@@ -11,15 +11,22 @@ export async function GET(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant } = await params;
-  const [items, categories, subcategories] = await Promise.all([
-    getMenuItems(tenant),
-    getCategories(tenant),
-    getSubCategories(tenant),
-  ]);
-  return NextResponse.json(
-    { items, categories, subcategories },
-    { headers: corsHeaders(req.headers.get('origin')) },
-  );
+  try {
+    const [items, categories, subcategories] = await Promise.all([
+      getMenuItems(tenant),
+      getCategories(tenant),
+      getSubCategories(tenant),
+    ]);
+    return NextResponse.json(
+      { items, categories, subcategories },
+      { headers: corsHeaders(req.headers.get('origin')) },
+    );
+  } catch {
+    return NextResponse.json(
+      { items: [], categories: [], subcategories: [] },
+      { status: 200, headers: corsHeaders(req.headers.get('origin')) },
+    );
+  }
 }
 
 export async function POST(

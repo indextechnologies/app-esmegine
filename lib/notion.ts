@@ -152,16 +152,32 @@ function notionHeaders() {
   };
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit, ms = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
 async function queryDB(dbId: string, filter?: object, sorts?: object[]) {
   const all: any[] = [];
   let cursor: string | undefined;
   do {
-    const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
-      method: 'POST',
-      headers: notionHeaders(),
-      body: JSON.stringify({ filter, sorts, page_size: 100, start_cursor: cursor }),
-      cache: 'no-store',
-    });
+    const res = await fetchWithTimeout(
+      `https://api.notion.com/v1/databases/${dbId}/query`,
+      {
+        method: 'POST',
+        headers: notionHeaders(),
+        body: JSON.stringify({ filter, sorts, page_size: 100, start_cursor: cursor }),
+        cache: 'no-store',
+      },
+    );
     if (!res.ok) throw new Error(`Notion query failed: ${res.status}`);
     const data = await res.json();
     all.push(...(data.results ?? []));

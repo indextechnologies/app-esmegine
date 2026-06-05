@@ -9,11 +9,11 @@ export default function GlitchIntro() {
     const node = el.current;
     if (!node) return;
 
-    if (sessionStorage.getItem('ix-seen')) {
+    if (localStorage.getItem('ix-seen')) {
       node.style.display = 'none';
       return;
     }
-    sessionStorage.setItem('ix-seen', '1');
+    localStorage.setItem('ix-seen', '1');
 
     const timer = setTimeout(() => {
       node.classList.add('gl-exit');

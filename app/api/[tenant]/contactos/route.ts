@@ -8,8 +8,12 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ tenant: string }> }) {
   const { tenant } = await params;
-  const data = await getContactos(tenant);
-  return NextResponse.json(data, { headers: corsHeaders(req.headers.get('origin')) });
+  try {
+    const data = await getContactos(tenant);
+    return NextResponse.json(data, { headers: corsHeaders(req.headers.get('origin')) });
+  } catch {
+    return NextResponse.json([], { status: 200, headers: corsHeaders(req.headers.get('origin')) });
+  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ tenant: string }> }) {

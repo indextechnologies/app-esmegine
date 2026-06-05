@@ -11,8 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant } = await params;
-  const reservas = await getReservations(tenant);
-  return NextResponse.json(reservas, { headers: corsHeaders(req.headers.get('origin')) });
+  try {
+    const reservas = await getReservations(tenant);
+    return NextResponse.json(reservas, { headers: corsHeaders(req.headers.get('origin')) });
+  } catch {
+    return NextResponse.json([], { status: 200, headers: corsHeaders(req.headers.get('origin')) });
+  }
 }
 
 export async function POST(

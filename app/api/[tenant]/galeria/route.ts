@@ -11,8 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant } = await params;
-  const items = await getGaleria(tenant);
-  return NextResponse.json(items, { headers: corsHeaders(req.headers.get('origin')) });
+  try {
+    const items = await getGaleria(tenant);
+    return NextResponse.json(items, { headers: corsHeaders(req.headers.get('origin')) });
+  } catch {
+    return NextResponse.json([], { status: 200, headers: corsHeaders(req.headers.get('origin')) });
+  }
 }
 
 export async function POST(

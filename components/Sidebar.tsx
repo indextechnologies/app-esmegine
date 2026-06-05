@@ -16,10 +16,7 @@ export default function Sidebar(props: Props) {
   const router = useRouter();
 
   function logout() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('esm_role');
-      localStorage.removeItem('esm_tenant');
-    }
+    sessionStorage.removeItem('esm-session');
     router.push('/login');
   }
 

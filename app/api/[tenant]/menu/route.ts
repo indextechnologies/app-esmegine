@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMenuItems, getCategories, getSubCategories, createMenuItem } from '../../../../lib/notion';
 import { corsHeaders, options as corsOptions } from '../../../../lib/cors';
 
+export const dynamic = 'force-dynamic';
+
 export async function OPTIONS(req: NextRequest) {
   return corsOptions(req);
 }

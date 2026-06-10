@@ -9,7 +9,7 @@ import { useClients } from '../lib/use-clients';
 
 type Props =
   | { mode: 'admin' }
-  | { mode: 'tenant'; slug: string; name: string; industry: string; emoji: string; logoUrl?: string };
+  | { mode: 'tenant'; slug: string; name: string; industry: string; emoji: string; logoUrl?: string; modules: string[] };
 
 export default function Sidebar(props: Props) {
   const path = usePathname();
@@ -89,17 +89,20 @@ export default function Sidebar(props: Props) {
     );
   }
 
-  const { slug, name, industry } = props;
+  const { slug, name, industry, modules } = props;
   const base = `/${slug}`;
 
-  const links = [
-    { href: `${base}/dashboard`, label: 'Inicio',    icon: <DashIcon size={16} />,     bnIcon: <DashIcon size={18} /> },
-    { href: `${base}/reservas`,  label: 'Reservas',  icon: <ResIcon size={16} />,      bnIcon: <ResIcon size={18} /> },
-    { href: `${base}/menu`,      label: 'Menú',      icon: <UtensilsIcon size={16} />, bnIcon: <UtensilsIcon size={18} /> },
-    { href: `${base}/contenido`, label: 'Contenido', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
-    { href: `${base}/config`,    label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },
+  // `core` modules are always shown; the rest only if enabled for this tenant in Notion.
+  const allLinks = [
+    { key: 'dashboard', core: true,  href: `${base}/dashboard`, label: 'Inicio',    icon: <DashIcon size={16} />,     bnIcon: <DashIcon size={18} /> },
+    { key: 'reservas',  core: false, href: `${base}/reservas`,  label: 'Reservas',  icon: <ResIcon size={16} />,      bnIcon: <ResIcon size={18} /> },
+    { key: 'menu',      core: false, href: `${base}/menu`,      label: 'Menú',      icon: <UtensilsIcon size={16} />, bnIcon: <UtensilsIcon size={18} /> },
+    { key: 'contenido', core: false, href: `${base}/contenido`, label: 'Contenido', icon: <GlobeIcon size={16} />,    bnIcon: <GlobeIcon size={18} /> },
+    { key: 'crm',       core: false, href: `${base}/crm`,       label: 'Clientes',  icon: <CRMIcon size={16} />,      bnIcon: <CRMIcon size={18} /> },
+    { key: 'config',    core: true,  href: `${base}/config`,    label: 'Config',    icon: <SettingsIcon size={16} />, bnIcon: <SettingsIcon size={18} /> },
   ];
 
+  const links = allLinks.filter(l => l.core || modules.includes(l.key));
   const bnLinks = links.slice(0, 5);
 
   return (

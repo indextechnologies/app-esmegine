@@ -17,6 +17,7 @@ export type Client = {
   plan:      string;
   active:    boolean;
   since:     string;
+  modules:   string[];
 };
 
 // Module-level singleton: one fetch across all components

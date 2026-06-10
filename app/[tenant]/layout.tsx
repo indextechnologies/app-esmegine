@@ -14,6 +14,10 @@ const PAGE_TITLES: Record<string, string> = {
   config:     'Configuración',
 };
 
+// Módulos opcionales: solo accesibles si el tenant los tiene habilitados en Notion.
+// dashboard y config son core (siempre accesibles).
+const OPTIONAL_MODULES = ['reservas', 'menu', 'contenido', 'crm'];
+
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   const { tenant } = useParams<{ tenant: string }>();
   const path = usePathname();
@@ -36,6 +40,15 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     }
     setAuthChecked(true);
   }, [tenant, router]);
+
+  // Route guard: block direct access to a module not enabled for this tenant.
+  useEffect(() => {
+    if (!client) return;
+    const seg = path.split('/')[2] ?? '';
+    if (OPTIONAL_MODULES.includes(seg) && !client.modules.includes(seg)) {
+      router.replace(`/${tenant}/dashboard`);
+    }
+  }, [client, path, tenant, router]);
 
   if (!authChecked || loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--text-3)' }}>
@@ -62,6 +75,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
         name={client.name}
         industry={client.industry}
         emoji={client.emoji}
+        modules={client.modules}
         logoUrl={client.website ? client.website.replace(/\/$/, '') + '/img/' + client.slug + '-logo.png' : undefined}
       />
       <div className="main-area">

@@ -13,6 +13,7 @@ const DB = {
   instagram:      'bc4310ab-cb12-4b6d-9f2f-f500005d7288',
   usuarios:       '21a4d81c-8f15-49ec-a291-9743ad436628',
   contactos:      '402974b8-c2cd-4203-a623-2c1b753c68f2',
+  modulos:        '842de3d9-e3a8-475e-a2e5-786a7dc99548',
 };
 
 // ─── Tenant cache (populated lazily from Notion) ────────────────────────────
@@ -96,7 +97,35 @@ export type NotionClient = {
   plan:      string;
   active:    boolean;
   since:     string;
+  modules:   string[];
 };
+
+// ─── Módulos del portal ──────────────────────────────────────────────────────
+
+export type NotionModule = {
+  id:           string;   // normalized (no dashes)
+  key:          string;   // reservas | menu | contenido | crm …
+  nombre:       string;
+  icono:        string;
+  ruta:         string;
+  orden:        number;
+  activoGlobal: boolean;
+};
+
+export async function getModules(): Promise<NotionModule[]> {
+  const rows = await queryDB(DB.modulos, undefined, [{ property: 'Orden', direction: 'ascending' }]);
+  return rows
+    .map((p: any) => ({
+      id:           p.id.replace(/-/g, ''),
+      key:          p.properties['Key']?.rich_text?.[0]?.plain_text ?? '',
+      nombre:       p.properties['Nombre']?.title?.[0]?.plain_text ?? '',
+      icono:        p.properties['Icono']?.rich_text?.[0]?.plain_text ?? '',
+      ruta:         p.properties['Ruta']?.rich_text?.[0]?.plain_text ?? '',
+      orden:        p.properties['Orden']?.number ?? 0,
+      activoGlobal: p.properties['Activo global']?.checkbox ?? false,
+    }))
+    .filter((m) => m.key);
+}
 
 const EMOJI_MAP: Record<string, string> = {
   cafe: '☕', cafeteria: '☕', barbershop: '✂️', bar: '🍸',
@@ -120,10 +149,18 @@ function notionFileUrl(prop: any): string | null {
 }
 
 export async function getClients(): Promise<NotionClient[]> {
-  const rows = await queryDB(DB.tenants, undefined, [{ property: 'Nombre', direction: 'ascending' }]);
+  const [rows, modules] = await Promise.all([
+    queryDB(DB.tenants, undefined, [{ property: 'Nombre', direction: 'ascending' }]),
+    getModules(),
+  ]);
+  // Only globally-active modules can ever be shown; map by normalized page id → key.
+  const keyById = new Map(modules.filter(m => m.activoGlobal).map(m => [m.id, m.key]));
   return rows.map((p: any) => {
     const color    = p.properties['Color Principal']?.rich_text?.[0]?.plain_text ?? '#6366f1';
     const industry = p.properties['Industria']?.select?.name ?? '';
+    const moduleKeys = (p.properties['Módulos']?.relation ?? [])
+      .map((r: any) => keyById.get(r.id.replace(/-/g, '')))
+      .filter((k: string | undefined): k is string => !!k);
     return {
       id:        p.id.replace(/-/g, ''),
       slug:      p.properties['Slug']?.rich_text?.[0]?.plain_text ?? '',
@@ -140,6 +177,7 @@ export async function getClients(): Promise<NotionClient[]> {
       plan:      'Standard',
       active:    p.properties['Estado']?.select?.name === 'activo',
       since:     (p.properties['Desde']?.date?.start ?? '').slice(0, 7),
+      modules:   moduleKeys,
     };
   });
 }

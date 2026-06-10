@@ -66,6 +66,12 @@ export function useClients() {
   return { clients, loading };
 }
 
+// Keep the shared cache in sync after an admin edits a client's modules,
+// so navigating to the tenant panel reflects the change without a refetch.
+export function setCachedClientModules(slug: string, modules: string[]) {
+  if (_cache) _cache = _cache.map(c => (c.slug === slug ? { ...c, modules } : c));
+}
+
 export function useClient(slug: string) {
   const { clients, loading } = useClients();
   return {

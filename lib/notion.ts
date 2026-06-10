@@ -127,6 +127,20 @@ export async function getModules(): Promise<NotionModule[]> {
     .filter((m) => m.key);
 }
 
+// Sets the enabled modules for a tenant (overwrites the relation).
+// `keys` are module keys (reservas, menu, …); invalid/unknown keys are ignored.
+// Returns the keys that were actually applied.
+export async function setTenantModules(tenant: string, keys: string[]): Promise<string[]> {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) throw new Error('Unknown tenant');
+  const modules = await getModules();
+  const idByKey = new Map(modules.filter(m => m.activoGlobal).map(m => [m.key, m.id]));
+  const applied = keys.filter(k => idByKey.has(k));
+  const relation = applied.map(k => ({ id: idByKey.get(k) as string }));
+  await patchPage(tenantId, { 'Módulos': { relation } });
+  return applied;
+}
+
 const EMOJI_MAP: Record<string, string> = {
   cafe: '☕', cafeteria: '☕', barbershop: '✂️', bar: '🍸',
   rooftop: '🌆', heladeria: '🍦', restaurante: '🍽️', salon: '💇',

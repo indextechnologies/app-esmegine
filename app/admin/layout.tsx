@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="av-sm">IT</div>
           </div>
         </header>
-        <main className="page-content">{children}</main>
+        <main className="page-content stagger-in">{children}</main>
       </div>
     </div>
   );

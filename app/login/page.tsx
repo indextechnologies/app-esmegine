@@ -3,6 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const PIN_LEN = 5;
+const SQ_STEP = 56; // 48px de cuadro + 8px de gap
+
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,6 +14,7 @@ export default function LoginPage() {
   const [error, setError]     = useState('');
   const [shake, setShake]     = useState(false);
   const [phase, setPhase]     = useState<'idle' | 'busy' | 'welcome'>('idle');
+  const [pinAnim, setPinAnim] = useState<'none' | 'fusing' | 'success'>('none');
   const [guest, setGuest]     = useState('');
   const nameRef               = useRef('');
   const digitsRef             = useRef<string[]>([]);
@@ -33,12 +37,16 @@ export default function LoginPage() {
       return;
     }
     setPhase('busy');
+    setPinAnim('fusing'); // los 5 cuadros viajan al centro mientras se verifica
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario: key, pin }),
-      });
+      const [res] = await Promise.all([
+        fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: key, pin }),
+        }),
+        delay(550), // que la fusión se vea aunque la API responda al instante
+      ]);
       if (!res.ok) throw new Error('auth');
       const user = await res.json();
       sessionStorage.setItem('esm-session', JSON.stringify({
@@ -47,9 +55,13 @@ export default function LoginPage() {
         tenant: user.tenant,
       }));
       setGuest(user.display);
+      setPinAnim('success'); // se vuelven uno con check verde
+      await delay(900);
       setPhase('welcome');
       setTimeout(() => router.push(user.dest), 1300);
     } catch {
+      setPinAnim('none'); // vuelven a su posición original
+      await delay(380);
       setPhase('idle');
       setError('Nombre o PIN incorrecto');
       triggerShake();
@@ -97,6 +109,14 @@ export default function LoginPage() {
     );
   }
 
+  const center = Math.floor(PIN_LEN / 2);
+  const pinRowCls = [
+    'esm-pin-row',
+    shake ? 'shake' : '',
+    pinAnim === 'fusing'  ? 'fusing'  : '',
+    pinAnim === 'success' ? 'success' : '',
+  ].filter(Boolean).join(' ');
+
   // ── Login screen ─────────────────────────────────────────────────────────────
   return (
     <div className="esm-login-screen">
@@ -126,10 +146,16 @@ export default function LoginPage() {
         {/* PIN squares */}
         <div className="esm-field-wrap">
           <div className="esm-field-label">PIN</div>
-          <div className={`esm-pin-row ${shake ? 'shake' : ''}`}>
+          <div className={pinRowCls}>
             {Array.from({ length: PIN_LEN }).map((_, i) => (
-              <div key={i} className={`esm-pin-sq ${i < digits.length ? 'filled' : ''}`}>
-                {i < digits.length && <div className="esm-pin-dot" />}
+              <div
+                key={i}
+                className={`esm-pin-sq ${i < digits.length ? 'filled' : ''}`}
+                style={{ '--fuse-x': `${(center - i) * SQ_STEP}px` } as React.CSSProperties}
+              >
+                {pinAnim === 'success' && i === center
+                  ? <div className="esm-pin-check">✓</div>
+                  : i < digits.length && <div className="esm-pin-dot" />}
               </div>
             ))}
           </div>

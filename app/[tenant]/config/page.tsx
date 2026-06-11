@@ -1,14 +1,24 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useClient } from '../../../lib/use-clients';
+import { PALETTES, getPaletteId, savePalette } from '../../../lib/palette';
 
 export default function TenantConfigPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { client } = useClient(tenant);
   const [toast, setToast] = useState('');
+  const [palette, setPalette] = useState('indigo');
+
+  useEffect(() => { setPalette(getPaletteId(tenant)); }, [tenant]);
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(''), 3000); }
+
+  function pickPalette(id: string) {
+    setPalette(id);
+    savePalette(tenant, id);
+    showToast('Paleta aplicada');
+  }
 
   return (
     <>
@@ -26,6 +36,27 @@ export default function TenantConfigPage() {
               </div>
               <span className="badge badge-active">Activo</span>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-hd"><div className="card-title">Apariencia</div></div>
+          <div style={{ fontSize:12.5, color:'var(--text-2)', marginBottom:12 }}>
+            Elegí el color de acento de tu portal. Se aplica al instante.
+          </div>
+          <div className="pal-grid">
+            {PALETTES.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                className={`pal-opt ${palette === p.id ? 'active' : ''}`}
+                style={{ '--pal-c1': p.c1, '--pal-c2': p.c2 } as React.CSSProperties}
+                onClick={() => pickPalette(p.id)}
+              >
+                <div className="pal-sw" />
+                <div className="pal-name">{p.name}</div>
+              </button>
+            ))}
           </div>
         </div>
 

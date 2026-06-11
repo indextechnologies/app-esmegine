@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { BellIcon } from '../../components/Icons';
 import { useClient } from '../../lib/use-clients';
+import { applyPalette, resetPalette } from '../../lib/palette';
 
 const PAGE_TITLES: Record<string, string> = {
   dashboard:  'Inicio',
@@ -40,6 +41,12 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
     }
     setAuthChecked(true);
   }, [tenant, router]);
+
+  // Paleta de acento del cliente (persistida en localStorage).
+  useEffect(() => {
+    applyPalette(tenant);
+    return () => resetPalette();
+  }, [tenant]);
 
   // Route guard: block direct access to a module not enabled for this tenant.
   useEffect(() => {
@@ -94,7 +101,7 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
             <div className="av-sm">{client.name.slice(0, 2).toUpperCase()}</div>
           </div>
         </header>
-        <main className="page-content">{children}</main>
+        <main key={path} className="page-content stagger-in">{children}</main>
       </div>
     </div>
   );

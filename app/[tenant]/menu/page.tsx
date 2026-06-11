@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useClient } from '../../../lib/use-clients';
+import { tieneMenuDelDia } from '../../../lib/features';
 import { PlusIcon, EditIcon, TrashIcon, ExternalIcon, UtensilsIcon, SunIcon } from '../../../components/Icons';
 
 type Category    = { id: string; nombre: string; icono: string; orden: number; activo: boolean; modoVista: boolean; };
@@ -13,9 +14,10 @@ type Tab = 'menu' | 'daily';
 export default function MenuPage() {
   const { tenant } = useParams<{ tenant: string }>();
   const { client } = useClient(tenant);
+  const hasDaily   = tieneMenuDelDia(tenant);
 
   const [tab, setTab]               = useState<Tab>('menu');
-  const [viewMode, setViewMode]     = useState<'list' | 'gallery'>('list');
+  const [viewMode, setViewMode]     = useState<'list' | 'gallery'>('gallery');
   const [items, setItems]           = useState<MenuItem[]>([]);
   const [categories, setCats]       = useState<Category[]>([]);
   const [subcategories, setSubcats] = useState<SubCategory[]>([]);
@@ -281,12 +283,14 @@ export default function MenuPage() {
           <div className="mitem-cat">{item.descripcion}</div>
         </div>
         <div className="mitem-price">Gs {item.precio.toLocaleString('es-PY')}</div>
-        <button
-          title={item.platoDelDia ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
-          onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}
-          style={{ background: item.platoDelDia ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.platoDelDia ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 8px', fontSize: 13, cursor: 'pointer', color: item.platoDelDia ? '#f59e0b' : 'var(--text-3)', transition: 'all .15s' }}>
-          ★
-        </button>
+        {hasDaily && (
+          <button
+            title={item.platoDelDia ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
+            onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}
+            style={{ background: item.platoDelDia ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.platoDelDia ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 8px', fontSize: 13, cursor: 'pointer', color: item.platoDelDia ? '#f59e0b' : 'var(--text-3)', transition: 'all .15s' }}>
+            ★
+          </button>
+        )}
         <span className={`badge badge-${item.activo ? 'confirmed' : 'inactive'}`} style={{ cursor: 'pointer' }} onClick={() => patchItem(item.id, { activo: !item.activo })}>
           {item.activo ? 'Activo' : 'Oculto'}
         </span>
@@ -318,12 +322,14 @@ export default function MenuPage() {
           </div>
           {item.descripcion && <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{item.descripcion}</div>}
           <div style={{ display: 'flex', gap: 4, marginTop: 'auto', paddingTop: 8 }}>
-            <button
-              title={item.platoDelDia ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
-              onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}
-              style={{ background: item.platoDelDia ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.platoDelDia ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 9px', fontSize: 13, cursor: 'pointer', color: item.platoDelDia ? '#f59e0b' : 'var(--text-3)' }}>
-              ★
-            </button>
+            {hasDaily && (
+              <button
+                title={item.platoDelDia ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
+                onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}
+                style={{ background: item.platoDelDia ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.platoDelDia ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 9px', fontSize: 13, cursor: 'pointer', color: item.platoDelDia ? '#f59e0b' : 'var(--text-3)' }}>
+                ★
+              </button>
+            )}
             <button className="abtn abtn-edit" onClick={() => openEditItem(item)}><EditIcon size={12} /></button>
             <button className="abtn abtn-canc" onClick={() => deleteItem(item.id)}><TrashIcon size={12} /></button>
           </div>
@@ -359,8 +365,8 @@ export default function MenuPage() {
 
       <div className="tabs">
         {([
-          { t: 'menu'  as Tab, label: 'Menú',    icon: <UtensilsIcon size={13} /> },
-          { t: 'daily' as Tab, label: 'Del Día', icon: <SunIcon      size={13} /> },
+          { t: 'menu' as Tab, label: 'Menú', icon: <UtensilsIcon size={13} /> },
+          ...(hasDaily ? [{ t: 'daily' as Tab, label: 'Del Día', icon: <SunIcon size={13} /> }] : []),
         ]).map(({ t, label, icon }) => (
           <button key={t} className={`tab-btn ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {icon}{label}

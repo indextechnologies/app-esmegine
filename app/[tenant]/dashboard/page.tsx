@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { useClient } from '../../../lib/use-clients';
+import { tieneMenuDelDia } from '../../../lib/features';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -144,24 +145,26 @@ export default function TenantDashboard() {
               ))}
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>
-                ★ Menú del día {menuDaily.length > 0 && `(${menuDaily.length})`}
+            {tieneMenuDelDia(tenant) && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>
+                  ★ Menú del día {menuDaily.length > 0 && `(${menuDaily.length})`}
+                </div>
+                {menuDaily.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+                    Ningún plato del día seleccionado. <Link href={`/${tenant}/menu`} style={{ color: 'var(--accent-1)', textDecoration: 'none' }}>Elegir platos →</Link>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {menuDaily.map(it => (
+                      <span key={it.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 8, padding: '5px 11px', fontSize: 12.5, fontWeight: 600 }}>
+                        <span style={{ color: '#f59e0b' }}>★</span> {it.nombre}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              {menuDaily.length === 0 ? (
-                <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                  Ningún plato del día seleccionado. <Link href={`/${tenant}/menu`} style={{ color: 'var(--accent-1)', textDecoration: 'none' }}>Elegir platos →</Link>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {menuDaily.map(it => (
-                    <span key={it.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 8, padding: '5px 11px', fontSize: 12.5, fontWeight: 600 }}>
-                      <span style={{ color: '#f59e0b' }}>★</span> {it.nombre}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </section>
       )}

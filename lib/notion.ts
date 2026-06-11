@@ -162,6 +162,22 @@ function notionFileUrl(prop: any): string | null {
   return f.type === 'external' ? (f.external?.url ?? null) : (f.file?.url ?? null);
 }
 
+// Resolve the (short-lived) signed URL of a menu item photo, verifying the
+// page belongs to the tenant so one tenant can't read another's files.
+export async function getMenuItemFotoUrl(tenant: string, pageId: string): Promise<string | null> {
+  const tenantId = await getTenantPageId(tenant);
+  if (!tenantId) return null;
+  const res = await fetchWithTimeout(`https://api.notion.com/v1/pages/${pageId}`, {
+    headers: notionHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  const p: any = await res.json();
+  const rel = p.properties?.['Tenant']?.relation?.[0]?.id?.replace(/-/g, '');
+  if (rel !== tenantId) return null;
+  return notionFileUrl(p.properties?.['Foto']) ?? p.properties?.['Imagen URL']?.url ?? null;
+}
+
 export async function getClients(): Promise<NotionClient[]> {
   const [rows, modules] = await Promise.all([
     queryDB(DB.tenants, undefined, [{ property: 'Nombre', direction: 'ascending' }]),

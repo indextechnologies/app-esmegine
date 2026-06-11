@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    // Las webs de los tenants consumen /_next/image sobre las fotos de menú.
+    localPatterns: [
+      {
+        pathname: '/api/*/menu/foto/**',
+        search: '',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

@@ -15,6 +15,7 @@ export default function MenuPage() {
   const { client } = useClient(tenant);
 
   const [tab, setTab]               = useState<Tab>('menu');
+  const [viewMode, setViewMode]     = useState<'list' | 'gallery'>('list');
   const [items, setItems]           = useState<MenuItem[]>([]);
   const [categories, setCats]       = useState<Category[]>([]);
   const [subcategories, setSubcats] = useState<SubCategory[]>([]);
@@ -297,6 +298,52 @@ export default function MenuPage() {
     );
   }
 
+  // Gallery card (image-first) — used when viewMode === 'gallery'
+  function renderItemCard(item: MenuItem) {
+    return (
+      <div key={item.id} className="card" style={{ padding: 0, overflow: 'hidden', opacity: saving === item.id ? 0.6 : 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'relative', aspectRatio: '4 / 3', background: 'var(--bg-elevated)' }}>
+          {item.imagenUrl
+            ? <img src={item.imagenUrl} alt={item.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 11 }}>sin foto</div>}
+          {item.platoDelDia && <span style={{ position: 'absolute', top: 6, left: 6, fontSize: 9.5, background: 'rgba(245,158,11,.92)', color: '#fff', padding: '2px 7px', borderRadius: 5, fontWeight: 700 }}>★ Del Día</span>}
+          <span className={`badge badge-${item.activo ? 'confirmed' : 'inactive'}`} style={{ position: 'absolute', top: 6, right: 6, cursor: 'pointer' }} onClick={() => patchItem(item.id, { activo: !item.activo })}>
+            {item.activo ? 'Activo' : 'Oculto'}
+          </span>
+        </div>
+        <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>{item.nombre}</span>
+            <span style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>Gs {item.precio.toLocaleString('es-PY')}</span>
+          </div>
+          {item.descripcion && <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.35 }}>{item.descripcion}</div>}
+          <div style={{ display: 'flex', gap: 4, marginTop: 'auto', paddingTop: 8 }}>
+            <button
+              title={item.platoDelDia ? 'Quitar del Menú del Día' : 'Agregar al Menú del Día'}
+              onClick={() => patchItem(item.id, { platoDelDia: !item.platoDelDia })}
+              style={{ background: item.platoDelDia ? 'rgba(245,158,11,.2)' : 'var(--bg-elevated)', border: `1px solid ${item.platoDelDia ? 'rgba(245,158,11,.5)' : 'var(--border)'}`, borderRadius: 6, padding: '3px 9px', fontSize: 13, cursor: 'pointer', color: item.platoDelDia ? '#f59e0b' : 'var(--text-3)' }}>
+              ★
+            </button>
+            <button className="abtn abtn-edit" onClick={() => openEditItem(item)}><EditIcon size={12} /></button>
+            <button className="abtn abtn-canc" onClick={() => deleteItem(item.id)}><TrashIcon size={12} /></button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Renders a group of items as rows (list) or a responsive image grid (gallery).
+  function renderItems(arr: MenuItem[]) {
+    if (viewMode === 'gallery') {
+      return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, padding: '12px 16px' }}>
+          {arr.map(renderItemCard)}
+        </div>
+      );
+    }
+    return arr.map(item => renderItemRow(item, false));
+  }
+
   return (
     <>
       <div className="pg-title">Menú</div>
@@ -354,8 +401,24 @@ export default function MenuPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{items.length} items · {activeCount} activos</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{items.length} items · {activeCount} activos</div>
+                  {/* Toggle de vista: Lista (compacta) / Galería (con imágenes) */}
+                  <div style={{ display: 'inline-flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                    {([
+                      { m: 'list'    as const, label: '☰ Lista' },
+                      { m: 'gallery' as const, label: '▦ Galería' },
+                    ]).map(({ m, label }) => (
+                      <button key={m} type="button" onClick={() => setViewMode(m)}
+                        style={{ fontSize: 11.5, padding: '5px 11px', cursor: 'pointer', border: 'none', fontWeight: 600, transition: 'all .12s',
+                          background: viewMode === m ? 'var(--accent-1, #6366f1)' : 'transparent',
+                          color: viewMode === m ? '#fff' : 'var(--text-3)' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button className="btn-primary" onClick={() => { setEditItem(null); setItemForm({ nombre: '', descripcion: '', precio: '', categoriaId: categories[0]?.id ?? '', subcategoriaId: '', destacado: false, imagenUrl: '' }); setItemModal(true); }}>
                   <PlusIcon size={13} /> Agregar item
                 </button>
@@ -413,7 +476,7 @@ export default function MenuPage() {
                               </button>
                             </div>
                           </div>
-                          {subItems.map(item => renderItemRow(item, imgMode))}
+                          {renderItems(subItems)}
                           {subItems.length === 0 && (
                             <div style={{ padding: '8px 16px 8px 36px', fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic', borderBottom: '1px solid var(--border)' }}>
                               Sin items — agregá uno con "+ Item"
@@ -434,7 +497,7 @@ export default function MenuPage() {
                               <span style={{ fontSize: 10, color: 'var(--text-3)', fontStyle: 'italic' }}>Sin subcategoría</span>
                             </div>
                           )}
-                          {directItems.map(item => renderItemRow(item, imgMode))}
+                          {renderItems(directItems)}
                         </>
                       );
                     })()}
